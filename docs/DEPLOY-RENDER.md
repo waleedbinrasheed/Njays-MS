@@ -36,6 +36,11 @@ that it is fast. The database (Neon) keeps its data.
 
    (`DB_URL` = `jdbc:` + the part after `@`, with `postgresql://` in front of the host.)
 
+   Shortcut: you may also paste Neon's string **exactly as shown** (`postgresql://user:password@host/db?...`)
+   into `DB_URL`; the backend converts it and takes the user and password from it when
+   `DB_USERNAME` / `DB_PASSWORD` are empty. Setting the three values separately is still preferred,
+   because then the password is not part of the URL.
+
 The tables are created automatically by the backend on its first start.
 
 ## 2. Render: create both services from the Blueprint
