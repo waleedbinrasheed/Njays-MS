@@ -37,8 +37,8 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     label: "Purchases",
     items: [
-      { label: "New Purchase", href: "/purchases/new", permission: "PURCHASE_CREATE", ready: false },
-      { label: "Purchase History", href: "/purchases", permission: "PURCHASE_VIEW", ready: false },
+      { label: "New Purchase", href: "/purchases/new", permission: "PURCHASE_CREATE", ready: true },
+      { label: "Purchase History", href: "/purchases", permission: "PURCHASE_VIEW", ready: true },
     ],
   },
   {

@@ -7,6 +7,7 @@ import com.inventory.entity.Supplier;
 import com.inventory.exception.BusinessException;
 import com.inventory.exception.ResourceNotFoundException;
 import com.inventory.mapper.MasterDataMapper;
+import com.inventory.repository.PurchaseRepository;
 import com.inventory.repository.SupplierRepository;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -15,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import static com.inventory.service.MasterDataSupport.checkVersion;
 import static com.inventory.service.MasterDataSupport.deleteIfUnused;
+import static com.inventory.service.MasterDataSupport.inUse;
 import static com.inventory.service.MasterDataSupport.searchTerm;
 import static com.inventory.service.MasterDataSupport.trimToNull;
 
@@ -22,9 +24,11 @@ import static com.inventory.service.MasterDataSupport.trimToNull;
 public class SupplierService {
 
     private final SupplierRepository suppliers;
+    private final PurchaseRepository purchases;
 
-    public SupplierService(SupplierRepository suppliers) {
+    public SupplierService(SupplierRepository suppliers, PurchaseRepository purchases) {
         this.suppliers = suppliers;
+        this.purchases = purchases;
     }
 
     @Transactional(readOnly = true)
@@ -60,11 +64,14 @@ public class SupplierService {
         return MasterDataMapper.toResponse(suppliers.saveAndFlush(supplier));
     }
 
-    /** Suppliers with purchases are protected by foreign keys (Phase 5). */
     @Transactional
     public void delete(Long id) {
         Supplier supplier = load(id);
-        deleteIfUnused(suppliers, supplier, "Supplier '" + supplier.getName() + "'");
+        String label = "Supplier '" + supplier.getName() + "'";
+        if (purchases.existsBySupplierId(id)) {
+            throw inUse(label);
+        }
+        deleteIfUnused(suppliers, supplier, label);
     }
 
     private void apply(Supplier s, PartyRequest r, String name) {

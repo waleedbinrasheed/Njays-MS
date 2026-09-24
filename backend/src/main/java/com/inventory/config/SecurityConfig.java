@@ -70,6 +70,9 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/stock-adjustments").hasAuthority("STOCK_ADJUST")
                         .requestMatchers(HttpMethod.GET, "/api/inventory/**", "/api/stock-transactions/**",
                                 "/api/stock-adjustments/**").hasAuthority("INVENTORY_VIEW")
+                        .requestMatchers(HttpMethod.GET, "/api/purchases/**").hasAuthority("PURCHASE_VIEW")
+                        .requestMatchers(HttpMethod.POST, "/api/purchases/*/cancel").hasAuthority("PURCHASE_CANCEL")
+                        .requestMatchers("/api/purchases/**").hasAuthority("PURCHASE_CREATE")
                         .requestMatchers("/api/**").authenticated()
                         .anyRequest().denyAll())
                 .addFilterBefore(new SessionUserRefreshFilter(userDetailsService, contextRepository, authHandlers),

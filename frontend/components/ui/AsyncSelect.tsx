@@ -3,10 +3,12 @@
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 
-export interface Option {
+export interface Option<T = unknown> {
   id: number;
   label: string;
   detail?: string;
+  /** The full record behind the option, for pickers that need more than id and label. */
+  data?: T;
 }
 
 interface AsyncSelectProps {
@@ -42,10 +44,14 @@ export function AsyncSelect({
   const [highlight, setHighlight] = useState(0);
   const debounced = useDebouncedValue(text, 250);
   const loadRef = useRef(load);
+  const onChangeRef = useRef(onChange);
   const containerRef = useRef<HTMLDivElement>(null);
+  // Enter pressed before results arrived (e.g. a barcode scanner): pick when they land.
+  const pendingEnter = useRef(false);
 
   useEffect(() => {
     loadRef.current = load;
+    onChangeRef.current = onChange;
   });
 
   useEffect(() => {
@@ -54,6 +60,15 @@ export function AsyncSelect({
     loadRef
       .current(debounced, controller.signal)
       .then((result) => {
+        if (pendingEnter.current) {
+          pendingEnter.current = false;
+          if (result.length === 1) {
+            onChangeRef.current(result[0]);
+            setText("");
+            setOpen(false);
+            return;
+          }
+        }
         setOptions(result);
         setHighlight(0);
         setLoadedFor(debounced);
@@ -94,7 +109,8 @@ export function AsyncSelect({
       setHighlight((h) => Math.max(h - 1, 0));
     } else if (e.key === "Enter" && open) {
       e.preventDefault();
-      if (options[highlight]) choose(options[highlight]);
+      if (loading || text !== debounced) pendingEnter.current = true;
+      else if (options[highlight]) choose(options[highlight]);
     } else if (e.key === "Escape") {
       setOpen(false);
     }

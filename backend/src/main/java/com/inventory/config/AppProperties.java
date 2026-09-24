@@ -8,9 +8,10 @@ import java.time.Duration;
  * Application settings under the {@code app.*} prefix.
  *
  * @param timezone the shop's time zone; "today", "this month" and date filters use it
+ * @param business name and contact details printed on invoices
  */
 @ConfigurationProperties(prefix = "app")
-public record AppProperties(Security security, Bootstrap bootstrap, String timezone) {
+public record AppProperties(Security security, Bootstrap bootstrap, String timezone, Business business) {
 
     /**
      * @param sessionTimeout inactivity period after which the user must sign in again
@@ -31,9 +32,16 @@ public record AppProperties(Security security, Bootstrap bootstrap, String timez
         }
     }
 
+    public record Business(String name, String address, String phone, String email) {
+        public Business {
+            if (name == null || name.isBlank()) name = "Book Shop";
+        }
+    }
+
     public AppProperties {
         if (security == null) security = new Security(null);
         if (bootstrap == null) bootstrap = new Bootstrap(null, null);
         if (timezone == null || timezone.isBlank()) timezone = "Asia/Karachi";
+        if (business == null) business = new Business(null, null, null, null);
     }
 }

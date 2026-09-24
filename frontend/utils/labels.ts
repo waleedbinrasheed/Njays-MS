@@ -1,4 +1,5 @@
 import type { AdjustmentReason, StockLevel, TransactionType } from "@/types/inventory";
+import type { DocumentStatus, PaymentStatus } from "@/types/purchase";
 
 export const TRANSACTION_TYPE_LABELS: Record<TransactionType, string> = {
   PURCHASE: "Purchase",
@@ -22,6 +23,17 @@ export const STOCK_LEVEL_LABELS: Record<StockLevel, string> = {
   OUT_OF_STOCK: "Out of stock",
   LOW: "Low stock",
   OK: "In stock",
+};
+
+export const PAYMENT_STATUS_LABELS: Record<PaymentStatus, string> = {
+  UNPAID: "Unpaid",
+  PARTIAL: "Partially paid",
+  PAID: "Paid",
+};
+
+export const DOCUMENT_STATUS_LABELS: Record<DocumentStatus, string> = {
+  COMPLETED: "Completed",
+  CANCELLED: "Cancelled",
 };
 
 /** "+5" / "−3" with a real minus sign. */

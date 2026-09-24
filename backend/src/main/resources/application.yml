@@ -55,6 +55,12 @@ server:
 app:
   # "Today", "this month" and date filters are counted in this zone.
   timezone: ${APP_TIMEZONE:Asia/Karachi}
+  # Printed at the top of purchase and sales invoices. Override in application-local.yml.
+  business:
+    name: ${BUSINESS_NAME:Book Shop}
+    address: ${BUSINESS_ADDRESS:}
+    phone: ${BUSINESS_PHONE:}
+    email: ${BUSINESS_EMAIL:}
   security:
     # Inactivity timeout; the user is signed out after this much idle time.
     session-timeout: ${SESSION_TIMEOUT:30m}

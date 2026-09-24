@@ -90,6 +90,13 @@ one company-wide inventory, one stock location.
   `document_sequence` table row-locked per (type, year) — gap-free and race-safe.
 - **Money:** `NUMERIC(12,2)`, PKR. Line: `qty × unit price − line discount % + line tax %`.
   Header: optional fixed discount on the whole invoice. Payment status: `PAID/UNPAID/PARTIAL`.
+- **Purchases:** one line per product; supplier and products must be active; date not in the future
+  (shop time zone). Save = number + document + stock movements in one transaction. Only payment status
+  can change afterwards. Cancel requires a reason and reverses the stock; it is refused if that stock
+  has already been used. Product purchase prices are not changed automatically by purchases.
+- **Numbering:** `document_sequence` upsert inside the document transaction; the year is the year the
+  document is entered. `PurchaseConcurrencyIT` proves concurrent saves get consecutive unique numbers
+  and a failed save consumes none.
 - **Walk-in customer:** seeded customer record used as the default on new sales.
 - **Time:** stored as `timestamptz` (UTC); "today/this month" computed in `Asia/Karachi`.
 - **Audit:** `created_by/created_at/updated_by/updated_at` on master data and documents.

@@ -8,5 +8,6 @@ export async function loadStockedProductOptions(search: string, signal: AbortSig
     id: i.productId,
     label: i.title,
     detail: [i.isbn, i.author, `Stock: ${i.quantity}`, i.active ? null : "Inactive"].filter(Boolean).join(" · "),
+    data: i,
   }));
 }

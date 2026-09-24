@@ -5,6 +5,16 @@
   --font-sans: ui-sans-serif, system-ui, "Segoe UI", Roboto, Arial, sans-serif;
 }
 
+@media print {
+  @page {
+    size: A4;
+    margin: 12mm;
+  }
+  body {
+    background: white !important;
+  }
+}
+
 body {
   background: var(--color-slate-50);
   color: var(--color-slate-900);

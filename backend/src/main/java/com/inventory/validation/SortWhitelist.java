@@ -42,6 +42,11 @@ public final class SortWhitelist {
             }
             orders.add(order.withProperty(path));
         }
+        // Stable paging: rows with equal sort values always come back in the same order.
+        if (orders.stream().noneMatch(o -> o.getProperty().equals("id"))) {
+            Sort.Direction direction = orders.isEmpty() ? Sort.Direction.ASC : orders.getFirst().getDirection();
+            orders.add(new Sort.Order(direction, "id"));
+        }
         return PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), Sort.by(orders));
     }
 }

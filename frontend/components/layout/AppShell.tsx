@@ -64,7 +64,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex min-h-screen flex-1 flex-col">
-      <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-slate-200 bg-white px-4">
+      <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-slate-200 bg-white px-4 print:hidden">
         <div className="flex items-center gap-3">
           <button
             type="button"
@@ -93,14 +93,14 @@ export function AppShell({ children }: { children: ReactNode }) {
       </header>
 
       <div className="flex flex-1">
-        <aside className="hidden w-60 shrink-0 border-r border-slate-200 bg-white lg:block">{sidebar}</aside>
+        <aside className="hidden w-60 shrink-0 border-r border-slate-200 bg-white lg:block print:hidden">{sidebar}</aside>
         {menuOpen && (
           <div className="fixed inset-0 top-14 z-20 lg:hidden">
             <div className="absolute inset-0 bg-slate-900/30" onClick={() => setMenuOpen(false)} aria-hidden />
             <aside className="relative h-full w-64 overflow-y-auto bg-white shadow-lg">{sidebar}</aside>
           </div>
         )}
-        <main className="min-w-0 flex-1 px-4 py-6 sm:px-6 lg:px-8">{children}</main>
+        <main className="min-w-0 flex-1 px-4 py-6 sm:px-6 lg:px-8 print:p-0">{children}</main>
       </div>
     </div>
   );
