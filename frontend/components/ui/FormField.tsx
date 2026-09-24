@@ -1,4 +1,10 @@
-import { useId, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes } from "react";
+import {
+  useId,
+  type InputHTMLAttributes,
+  type ReactNode,
+  type SelectHTMLAttributes,
+  type TextareaHTMLAttributes,
+} from "react";
 
 const CONTROL =
   "block w-full rounded-md border bg-white px-3 py-2 text-sm text-slate-900 shadow-xs placeholder:text-slate-400 focus:outline-2 focus:outline-offset-0 disabled:bg-slate-100 disabled:text-slate-500";
@@ -54,6 +60,21 @@ export function TextField({ label, error, hint, required, id, ...rest }: TextFie
         className={controlClass(error)}
         {...rest}
       />
+    </FieldShell>
+  );
+}
+
+interface TextAreaFieldProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {
+  label: string;
+  error?: string;
+}
+
+export function TextAreaField({ label, error, required, id, rows = 3, ...rest }: TextAreaFieldProps) {
+  const autoId = useId();
+  const fieldId = id ?? autoId;
+  return (
+    <FieldShell id={fieldId} label={label} required={required} error={error}>
+      <textarea id={fieldId} rows={rows} required={required} className={controlClass(error)} {...rest} />
     </FieldShell>
   );
 }

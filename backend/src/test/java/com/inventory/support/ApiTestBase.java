@@ -1,5 +1,6 @@
 package com.inventory.support;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -60,5 +61,9 @@ public abstract class ApiTestBase {
 
     protected String toJson(Object body) throws Exception {
         return json.writeValueAsString(body);
+    }
+
+    protected JsonNode read(MvcResult result) throws Exception {
+        return json.readTree(result.getResponse().getContentAsString());
     }
 }

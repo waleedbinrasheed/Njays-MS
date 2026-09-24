@@ -44,11 +44,11 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     label: "Master Data",
     items: [
-      { label: "Books/Products", href: "/master/products", permission: "MASTER_DATA_VIEW", ready: false },
-      { label: "Publishers", href: "/master/publishers", permission: "MASTER_DATA_VIEW", ready: false },
-      { label: "Categories", href: "/master/categories", permission: "MASTER_DATA_VIEW", ready: false },
-      { label: "Suppliers", href: "/master/suppliers", permission: "MASTER_DATA_VIEW", ready: false },
-      { label: "Customers", href: "/master/customers", permission: "MASTER_DATA_VIEW", ready: false },
+      { label: "Books/Products", href: "/master/products", permission: "MASTER_DATA_VIEW", ready: true },
+      { label: "Publishers", href: "/master/publishers", permission: "MASTER_DATA_VIEW", ready: true },
+      { label: "Categories", href: "/master/categories", permission: "MASTER_DATA_VIEW", ready: true },
+      { label: "Suppliers", href: "/master/suppliers", permission: "MASTER_DATA_VIEW", ready: true },
+      { label: "Customers", href: "/master/customers", permission: "MASTER_DATA_VIEW", ready: true },
     ],
   },
   {

@@ -65,7 +65,15 @@ one company-wide inventory, one stock location.
 
 - **Products:** table `product` with `product_type` (`BOOK` now). Book attributes (ISBN, author,
   edition, publication year) are nullable columns so non-book products can be added later
-  without redesign. UI labels it "Books/Products". ISBN unique when present.
+  without redesign. UI labels it "Books/Products". ISBN unique when present, stored without
+  hyphens/spaces; only the format (10 or 13 digits, ISBN-10 may end in X) is checked, not the
+  check digit, because some locally printed books carry ISBNs with a wrong check digit.
+- **Master data lifecycle:** records are deactivated rather than deleted once used. Delete only
+  succeeds for records nothing references (FK-enforced). Inactive publishers/categories stay on
+  existing products but cannot be chosen for new ones. Updates carry `version`; a stale version
+  returns 409 so one user's edit never silently overwrites another's.
+- **Search:** product search matches ISBN (ignoring hyphens), title and author, backed by
+  `pg_trgm` GIN indexes. All pickers query the API (type-to-search), never load full lists.
 - **Reorder level** lives only on `inventory`.
 - **Roles & permissions:** `app_user`, `role`, `user_role`, plus `permission` and
   `role_permission`. Code checks permissions (e.g. `SALE_CREATE`), not role names, so new roles

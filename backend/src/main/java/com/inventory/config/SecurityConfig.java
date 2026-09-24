@@ -38,6 +38,9 @@ import org.springframework.security.web.csrf.CsrfTokenRepository;
 @EnableMethodSecurity
 public class SecurityConfig {
 
+    private static final String[] MASTER_DATA = {
+            "/api/products/**", "/api/publishers/**", "/api/categories/**", "/api/suppliers/**", "/api/customers/**"};
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http,
                                                    JsonAuthHandlers authHandlers,
@@ -61,6 +64,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/users/**").hasAuthority("USER_MANAGE")
                         .requestMatchers(HttpMethod.GET, "/api/roles").hasAnyAuthority("ROLE_MANAGE", "USER_MANAGE")
                         .requestMatchers("/api/roles/**", "/api/permissions/**").hasAuthority("ROLE_MANAGE")
+                        .requestMatchers(HttpMethod.GET, MASTER_DATA).hasAuthority("MASTER_DATA_VIEW")
+                        .requestMatchers(MASTER_DATA).hasAuthority("MASTER_DATA_MANAGE")
                         .requestMatchers("/api/**").authenticated()
                         .anyRequest().denyAll())
                 .addFilterBefore(new SessionUserRefreshFilter(userDetailsService, contextRepository, authHandlers),
