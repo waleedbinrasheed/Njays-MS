@@ -10,7 +10,6 @@ import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -52,12 +51,6 @@ public final class PurchaseDtos {
             @Size(max = 500) String notes,
             @NotEmpty(message = "Add at least one item")
             @Size(max = 200, message = "A purchase can have at most 200 lines") List<@Valid PurchaseLineRequest> items) {
-    }
-
-    public record PaymentStatusRequest(@NotNull(message = "Payment status is required") PaymentStatus paymentStatus) {
-    }
-
-    public record CancelRequest(@NotBlank(message = "Give a reason for cancelling") @Size(max = 500) String reason) {
     }
 
     public record PurchaseLine(

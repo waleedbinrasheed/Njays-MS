@@ -30,8 +30,8 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     label: "Sales",
     items: [
-      { label: "New Sale", href: "/sales/new", permission: "SALE_CREATE", ready: false },
-      { label: "Sales History", href: "/sales", permission: "SALE_VIEW", ready: false },
+      { label: "New Sale", href: "/sales/new", permission: "SALE_CREATE", ready: true },
+      { label: "Sales History", href: "/sales", permission: "SALE_VIEW", ready: true },
     ],
   },
   {

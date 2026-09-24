@@ -8,12 +8,14 @@ import com.inventory.exception.BusinessException;
 import com.inventory.exception.ResourceNotFoundException;
 import com.inventory.mapper.MasterDataMapper;
 import com.inventory.repository.CustomerRepository;
+import com.inventory.repository.SaleRepository;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import static com.inventory.service.MasterDataSupport.checkVersion;
 import static com.inventory.service.MasterDataSupport.deleteIfUnused;
+import static com.inventory.service.MasterDataSupport.inUse;
 import static com.inventory.service.MasterDataSupport.searchTerm;
 import static com.inventory.service.MasterDataSupport.trimToNull;
 
@@ -21,9 +23,11 @@ import static com.inventory.service.MasterDataSupport.trimToNull;
 public class CustomerService {
 
     private final CustomerRepository customers;
+    private final SaleRepository sales;
 
-    public CustomerService(CustomerRepository customers) {
+    public CustomerService(CustomerRepository customers, SaleRepository sales) {
         this.customers = customers;
+        this.sales = sales;
     }
 
     @Transactional(readOnly = true)
@@ -62,14 +66,17 @@ public class CustomerService {
         return MasterDataMapper.toResponse(customers.saveAndFlush(customer));
     }
 
-    /** Customers with sales are protected by foreign keys (Phase 6). */
     @Transactional
     public void delete(Long id) {
         Customer customer = load(id);
         if (customer.isWalkIn()) {
             throw new BusinessException("The walk-in customer cannot be deleted");
         }
-        deleteIfUnused(customers, customer, "Customer '" + customer.getName() + "'");
+        String label = "Customer '" + customer.getName() + "'";
+        if (sales.existsByCustomerId(id)) {
+            throw inUse(label);
+        }
+        deleteIfUnused(customers, customer, label);
     }
 
     private void apply(Customer c, CustomerRequest r) {

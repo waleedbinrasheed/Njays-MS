@@ -73,6 +73,9 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/purchases/**").hasAuthority("PURCHASE_VIEW")
                         .requestMatchers(HttpMethod.POST, "/api/purchases/*/cancel").hasAuthority("PURCHASE_CANCEL")
                         .requestMatchers("/api/purchases/**").hasAuthority("PURCHASE_CREATE")
+                        .requestMatchers(HttpMethod.GET, "/api/sales/**").hasAuthority("SALE_VIEW")
+                        .requestMatchers(HttpMethod.POST, "/api/sales/*/cancel").hasAuthority("SALE_CANCEL")
+                        .requestMatchers("/api/sales/**").hasAuthority("SALE_CREATE")
                         .requestMatchers("/api/**").authenticated()
                         .anyRequest().denyAll())
                 .addFilterBefore(new SessionUserRefreshFilter(userDetailsService, contextRepository, authHandlers),

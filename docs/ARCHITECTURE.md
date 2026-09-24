@@ -94,6 +94,10 @@ one company-wide inventory, one stock location.
   (shop time zone). Save = number + document + stock movements in one transaction. Only payment status
   can change afterwards. Cancel requires a reason and reverses the stock; it is refused if that stock
   has already been used. Product purchase prices are not changed automatically by purchases.
+- **Sales:** same document rules as purchases; customer defaults to the walk-in customer and must be
+  active; unit price must be above zero. Stock is checked while each product row is locked, so two
+  cashiers cannot sell the same last copy (`SaleConcurrencyIT`). Cancelling returns all stock and is
+  always possible; partial returns are handled by Returns (Phase 7).
 - **Numbering:** `document_sequence` upsert inside the document transaction; the year is the year the
   document is entered. `PurchaseConcurrencyIT` proves concurrent saves get consecutive unique numbers
   and a failed save consumes none.

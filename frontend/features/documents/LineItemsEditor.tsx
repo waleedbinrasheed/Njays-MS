@@ -3,7 +3,7 @@
 import { useRef } from "react";
 import { AsyncSelect, type Option } from "@/components/ui/AsyncSelect";
 import { EmptyState } from "@/components/ui/Feedback";
-import { loadStockedProductOptions } from "@/features/inventory/lookups";
+import { loadActiveProductOptions } from "@/features/inventory/lookups";
 import type { InventoryItem } from "@/types/inventory";
 import { previewLine } from "@/utils/documentTotals";
 import { formatCurrency } from "@/utils/format";
@@ -91,7 +91,7 @@ export function LineItemsEditor({
           label="Add product"
           value={null}
           onChange={add}
-          load={loadStockedProductOptions}
+          load={loadActiveProductOptions}
           placeholder="Type or scan ISBN, title or author, then press Enter"
           clearable={false}
         />

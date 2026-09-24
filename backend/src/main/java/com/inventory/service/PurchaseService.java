@@ -2,9 +2,9 @@ package com.inventory.service;
 
 import com.inventory.dto.PageResponse;
 import com.inventory.dto.master.MasterDataDtos.Ref;
-import com.inventory.dto.purchase.PurchaseDtos.CancelRequest;
+import com.inventory.dto.document.DocumentDtos.CancelRequest;
 import com.inventory.dto.purchase.PurchaseDtos.CreatePurchaseRequest;
-import com.inventory.dto.purchase.PurchaseDtos.PaymentStatusRequest;
+import com.inventory.dto.document.DocumentDtos.PaymentStatusRequest;
 import com.inventory.dto.purchase.PurchaseDtos.PurchaseDetail;
 import com.inventory.dto.purchase.PurchaseDtos.PurchaseLineRequest;
 import com.inventory.dto.purchase.PurchaseDtos.PurchaseSummary;

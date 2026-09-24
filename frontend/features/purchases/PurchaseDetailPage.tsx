@@ -1,20 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import { useState, type FormEvent } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { ErrorBanner } from "@/components/ui/Feedback";
-import { TextAreaField } from "@/components/ui/FormField";
-import { FormDialog } from "@/components/ui/FormDialog";
 import { PageSpinner } from "@/components/ui/Spinner";
 import { useToast } from "@/components/ui/Toast";
 import { useAuth } from "@/features/auth/AuthProvider";
+import { CancelDocumentDialog } from "@/features/documents/CancelDocumentDialog";
 import { InvoiceLayout } from "@/features/documents/InvoiceLayout";
 import { PaymentStatusBadge } from "@/features/documents/StatusBadges";
 import { useApiQuery } from "@/hooks/useApiQuery";
 import { ApiError } from "@/services/apiClient";
 import { purchaseService } from "@/services/purchaseService";
-import type { PaymentStatus, PurchaseDetail } from "@/types/purchase";
+import type { PaymentStatus } from "@/types/purchase";
 import { formatDate, formatDateTime } from "@/utils/format";
 import { PAYMENT_STATUS_LABELS } from "@/utils/labels";
 
@@ -120,8 +119,16 @@ export function PurchaseDetailPage({ id }: { id: number }) {
       />
 
       {cancelling && (
-        <CancelDialog
-          purchase={p}
+        <CancelDocumentDialog
+          title={`Cancel ${p.purchaseNumber}?`}
+          submitLabel="Cancel purchase"
+          explanation={
+            <>
+              {p.items.reduce((n, i) => n + i.quantity, 0)} unit(s) will be removed from stock. This is only possible if that
+              stock is still on hand. The purchase stays in history, marked as cancelled.
+            </>
+          }
+          cancel={(reason) => purchaseService.cancel(p.id, reason)}
           onClose={() => setCancelling(false)}
           onDone={(updated) => {
             setCancelling(false);
@@ -131,53 +138,5 @@ export function PurchaseDetailPage({ id }: { id: number }) {
         />
       )}
     </>
-  );
-}
-
-function CancelDialog({
-  purchase,
-  onClose,
-  onDone,
-}: {
-  purchase: PurchaseDetail;
-  onClose: () => void;
-  onDone: (p: PurchaseDetail) => void;
-}) {
-  const [reason, setReason] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [formError, setFormError] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
-  const units = purchase.items.reduce((n, i) => n + i.quantity, 0);
-
-  async function submit(e: FormEvent) {
-    e.preventDefault();
-    if (!reason.trim()) {
-      setError("Give a reason for cancelling");
-      return;
-    }
-    setSaving(true);
-    try {
-      onDone(await purchaseService.cancel(purchase.id, reason));
-    } catch (err) {
-      setFormError(err instanceof ApiError ? err.message : "Could not cancel the purchase");
-      setSaving(false);
-    }
-  }
-
-  return (
-    <FormDialog
-      title={`Cancel ${purchase.purchaseNumber}?`}
-      submitLabel="Cancel purchase"
-      saving={saving}
-      formError={formError}
-      onSubmit={submit}
-      onClose={onClose}
-    >
-      <p className="text-sm text-slate-600">
-        {units} unit(s) will be removed from stock. This is only possible if that stock is still on hand. The purchase stays
-        in history, marked as cancelled.
-      </p>
-      <TextAreaField label="Reason" value={reason} onChange={(e) => setReason(e.target.value)} error={error ?? undefined} required autoFocus />
-    </FormDialog>
   );
 }
