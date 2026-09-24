@@ -20,7 +20,9 @@ public class DocumentNumberService {
 
     public enum DocumentType {
         PURCHASE("PUR"),
-        SALE("INV");
+        SALE("INV"),
+        SALE_RETURN("SRT"),
+        PURCHASE_RETURN("PRT");
 
         private final String prefix;
 

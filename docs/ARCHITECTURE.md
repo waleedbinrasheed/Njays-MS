@@ -98,6 +98,13 @@ one company-wide inventory, one stock location.
   active; unit price must be above zero. Stock is checked while each product row is locked, so two
   cashiers cannot sell the same last copy (`SaleConcurrencyIT`). Cancelling returns all stock and is
   always possible; partial returns are handled by Returns (Phase 7).
+- **Returns:** separate numbered documents (`SRT-…` sales returns, `PRT-…` purchase returns), each line
+  linked to the original invoice/purchase line. The original document row is locked while a return is
+  recorded, so concurrent returns can never exceed the quantity on it (`ReturnConcurrencyIT`). Amount per
+  line = share of the original line total (after line discount/tax); the last units get the exact
+  remainder so refunds never exceed what was charged; the invoice-level discount is not apportioned.
+  Returns are immutable. Cancelled documents cannot be returned, and a document with returns can no
+  longer be cancelled (return the rest instead). Purchase returns are refused if the stock is gone.
 - **Numbering:** `document_sequence` upsert inside the document transaction; the year is the year the
   document is entered. `PurchaseConcurrencyIT` proves concurrent saves get consecutive unique numbers
   and a failed save consumes none.

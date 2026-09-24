@@ -20,6 +20,7 @@ import com.inventory.exception.BusinessException;
 import com.inventory.exception.ResourceNotFoundException;
 import com.inventory.mapper.PurchaseMapper;
 import com.inventory.repository.AppUserRepository;
+import com.inventory.repository.PurchaseReturnRepository;
 import com.inventory.repository.ProductRepository;
 import com.inventory.repository.PurchaseRepository;
 import com.inventory.repository.PurchaseRepository.Filters;
@@ -69,12 +70,14 @@ public class PurchaseService {
     private final InventoryService inventoryService;
     private final DocumentNumberService numbers;
     private final UserDirectory userDirectory;
+    private final PurchaseReturnRepository purchaseReturns;
     private final Clock clock;
     private final ZoneId zone;
 
     public PurchaseService(PurchaseRepository purchases, SupplierRepository suppliers, ProductRepository products,
                            AppUserRepository users, InventoryService inventoryService, DocumentNumberService numbers,
-                           UserDirectory userDirectory, Clock clock, ZoneId businessZone) {
+                           UserDirectory userDirectory, PurchaseReturnRepository purchaseReturns,
+                           Clock clock, ZoneId businessZone) {
         this.purchases = purchases;
         this.suppliers = suppliers;
         this.products = products;
@@ -82,6 +85,7 @@ public class PurchaseService {
         this.inventoryService = inventoryService;
         this.numbers = numbers;
         this.userDirectory = userDirectory;
+        this.purchaseReturns = purchaseReturns;
         this.clock = clock;
         this.zone = businessZone;
     }
@@ -139,6 +143,10 @@ public class PurchaseService {
         Purchase purchase = purchases.lockById(id).orElseThrow(() -> new ResourceNotFoundException("Purchase", id));
         if (purchase.isCancelled()) {
             throw new BusinessException(HttpStatus.CONFLICT, "Purchase " + purchase.getPurchaseNumber() + " is already cancelled");
+        }
+        if (purchaseReturns.existsByPurchaseId(purchase.getId())) {
+            throw new BusinessException(HttpStatus.CONFLICT, "Purchase " + purchase.getPurchaseNumber()
+                    + " has returns and cannot be cancelled. Record a return for the remaining items instead");
         }
         String reason = request.reason().trim();
         try {

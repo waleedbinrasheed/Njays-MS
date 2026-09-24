@@ -6,8 +6,14 @@ import { useState, type ReactNode } from "react";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { NAV_GROUPS, type NavItem } from "@/features/navigation/navItems";
 
+/** The most specific menu entry wins, so "/sales/returns" highlights Sales Returns, not Sales History. */
 function isActive(pathname: string, href: string) {
-  return href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`);
+  if (href === "/") return pathname === "/";
+  if (pathname !== href && !pathname.startsWith(`${href}/`)) return false;
+  const more = NAV_GROUPS.flatMap((g) => g.items).some(
+    (i) => i.href !== href && i.href.startsWith(`${href}/`) && (pathname === i.href || pathname.startsWith(`${i.href}/`)),
+  );
+  return !more;
 }
 
 function NavLink({ item, pathname }: { item: NavItem; pathname: string }) {

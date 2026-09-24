@@ -9,6 +9,7 @@ import { useToast } from "@/components/ui/Toast";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { CancelDocumentDialog } from "@/features/documents/CancelDocumentDialog";
 import { InvoiceLayout } from "@/features/documents/InvoiceLayout";
+import { DocumentReturnsList, useDocumentReturns } from "@/features/returns/DocumentReturns";
 import { PaymentStatusBadge } from "@/features/documents/StatusBadges";
 import { useApiQuery } from "@/hooks/useApiQuery";
 import { ApiError } from "@/services/apiClient";
@@ -24,6 +25,8 @@ export function PurchaseDetailPage({ id }: { id: number }) {
   const [cancelling, setCancelling] = useState(false);
   const [paymentBusy, setPaymentBusy] = useState(false);
   const query = useApiQuery((signal) => purchaseService.get(id, signal), [id, version]);
+  const returns = useDocumentReturns("purchase", id, version);
+  const returnList = returns.data?.content ?? [];
   const p = query.data;
 
   if (query.error && !p) return <ErrorBanner message={query.error} onRetry={query.reload} />;
@@ -72,7 +75,15 @@ export function PurchaseDetailPage({ id }: { id: number }) {
           <Button variant="secondary" onClick={() => window.print()}>
             Print / Save as PDF
           </Button>
-          {hasPermission("PURCHASE_CANCEL") && !cancelled && (
+          {hasPermission("RETURN_CREATE") && !cancelled && (
+            <Link
+              href={`/purchases/${p.id}/return`}
+              className="inline-flex h-9 items-center rounded-md border border-slate-300 bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50"
+            >
+              Return items
+            </Link>
+          )}
+          {hasPermission("PURCHASE_CANCEL") && !cancelled && returns.data && returnList.length === 0 && (
             <Button variant="danger" onClick={() => setCancelling(true)}>
               Cancel purchase
             </Button>
@@ -117,6 +128,8 @@ export function PurchaseDetailPage({ id }: { id: number }) {
         totals={p}
         footer={p.notes ? <p className="whitespace-pre-line">Notes: {p.notes}</p> : undefined}
       />
+
+      <DocumentReturnsList kind="purchase" returns={returnList} />
 
       {cancelling && (
         <CancelDocumentDialog

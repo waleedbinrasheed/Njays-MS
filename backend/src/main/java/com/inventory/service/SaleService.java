@@ -20,6 +20,7 @@ import com.inventory.exception.BusinessException;
 import com.inventory.exception.ResourceNotFoundException;
 import com.inventory.mapper.SaleMapper;
 import com.inventory.repository.AppUserRepository;
+import com.inventory.repository.SaleReturnRepository;
 import com.inventory.repository.CustomerRepository;
 import com.inventory.repository.ProductRepository;
 import com.inventory.repository.SaleRepository;
@@ -70,12 +71,14 @@ public class SaleService {
     private final InventoryService inventoryService;
     private final DocumentNumberService numbers;
     private final UserDirectory userDirectory;
+    private final SaleReturnRepository saleReturns;
     private final Clock clock;
     private final ZoneId zone;
 
     public SaleService(SaleRepository sales, CustomerRepository customers, ProductRepository products,
                        AppUserRepository users, InventoryService inventoryService, DocumentNumberService numbers,
-                       UserDirectory userDirectory, Clock clock, ZoneId businessZone) {
+                       UserDirectory userDirectory, SaleReturnRepository saleReturns,
+                       Clock clock, ZoneId businessZone) {
         this.sales = sales;
         this.customers = customers;
         this.products = products;
@@ -83,6 +86,7 @@ public class SaleService {
         this.inventoryService = inventoryService;
         this.numbers = numbers;
         this.userDirectory = userDirectory;
+        this.saleReturns = saleReturns;
         this.clock = clock;
         this.zone = businessZone;
     }
@@ -127,12 +131,19 @@ public class SaleService {
         return detail(saved);
     }
 
-    /** Returns all sold stock. Always possible because it only adds stock back. */
+    /**
+     * Returns all sold stock. Refused once the invoice has returns (use a return for the rest instead),
+     * so stock can never be given back twice.
+     */
     @Transactional
     public SaleDetail cancel(Long id, CancelRequest request) {
         Sale sale = sales.lockById(id).orElseThrow(() -> new ResourceNotFoundException("Sale", id));
         if (sale.isCancelled()) {
             throw new BusinessException(HttpStatus.CONFLICT, "Invoice " + sale.getInvoiceNumber() + " is already cancelled");
+        }
+        if (saleReturns.existsBySaleId(sale.getId())) {
+            throw new BusinessException(HttpStatus.CONFLICT, "Invoice " + sale.getInvoiceNumber()
+                    + " has returns and cannot be cancelled. Record a return for the remaining items instead");
         }
         String reason = request.reason().trim();
         inventoryService.applyAll(sale.getItems().stream()

@@ -9,6 +9,7 @@ import { useToast } from "@/components/ui/Toast";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { CancelDocumentDialog } from "@/features/documents/CancelDocumentDialog";
 import { InvoiceLayout } from "@/features/documents/InvoiceLayout";
+import { DocumentReturnsList, useDocumentReturns } from "@/features/returns/DocumentReturns";
 import { PaymentStatusBadge } from "@/features/documents/StatusBadges";
 import { useApiQuery } from "@/hooks/useApiQuery";
 import { ApiError } from "@/services/apiClient";
@@ -24,6 +25,8 @@ export function SaleDetailPage({ id }: { id: number }) {
   const [cancelling, setCancelling] = useState(false);
   const [paymentBusy, setPaymentBusy] = useState(false);
   const query = useApiQuery((signal) => saleService.get(id, signal), [id, version]);
+  const returns = useDocumentReturns("sale", id, version);
+  const returnList = returns.data?.content ?? [];
   const s = query.data;
 
   if (query.error && !s) return <ErrorBanner message={query.error} onRetry={query.reload} />;
@@ -71,7 +74,15 @@ export function SaleDetailPage({ id }: { id: number }) {
           <Button variant="secondary" onClick={() => window.print()}>
             Print / Save as PDF
           </Button>
-          {hasPermission("SALE_CANCEL") && !cancelled && (
+          {hasPermission("RETURN_CREATE") && !cancelled && (
+            <Link
+              href={`/sales/${s.id}/return`}
+              className="inline-flex h-9 items-center rounded-md border border-slate-300 bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50"
+            >
+              Return items
+            </Link>
+          )}
+          {hasPermission("SALE_CANCEL") && !cancelled && returns.data && returnList.length === 0 && (
             <Button variant="danger" onClick={() => setCancelling(true)}>
               Cancel invoice
             </Button>
@@ -127,6 +138,8 @@ export function SaleDetailPage({ id }: { id: number }) {
         }
       />
 
+      <DocumentReturnsList kind="sale" returns={returnList} />
+
       {cancelling && (
         <CancelDocumentDialog
           title={`Cancel ${s.invoiceNumber}?`}
@@ -134,7 +147,7 @@ export function SaleDetailPage({ id }: { id: number }) {
           explanation={
             <>
               {s.items.reduce((n, i) => n + i.quantity, 0)} unit(s) will be returned to stock. The invoice stays in history,
-              marked as cancelled. For a partial return, use Returns instead (coming in the next phase).
+              marked as cancelled. To give back only some items, use Return items instead.
             </>
           }
           cancel={(reason) => saleService.cancel(s.id, reason)}
