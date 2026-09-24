@@ -1,0 +1,8 @@
+# Copy to application-local.yml (git-ignored) in the backend folder and fill in real values.
+# Top-level keys fill the ${...} placeholders in application.yml.
+DB_HOST: localhost
+DB_PORT: 5432
+spring:
+  datasource:
+    username: inventory_app
+    password: change-me

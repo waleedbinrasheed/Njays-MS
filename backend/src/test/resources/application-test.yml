@@ -1,0 +1,5 @@
+# Integration tests run against a dedicated local database, never the real one.
+# Credentials come from the same place as the app (application-local.yml or DB_USERNAME/DB_PASSWORD).
+spring:
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${TEST_DB_NAME:inventory_test}

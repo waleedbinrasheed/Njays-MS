@@ -1,0 +1,12 @@
+@import "tailwindcss";
+
+/* System fonts only: the app must build and run on a LAN server without internet access. */
+@theme inline {
+  --font-sans: ui-sans-serif, system-ui, "Segoe UI", Roboto, Arial, sans-serif;
+}
+
+body {
+  background: var(--color-slate-50);
+  color: var(--color-slate-900);
+  font-family: var(--font-sans);
+}

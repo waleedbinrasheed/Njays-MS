@@ -1,0 +1,32 @@
+# Secrets and local configuration - never commit
+application-local.yml
+application-local.properties
+*.env
+.env*
+*.pem
+*.key
+
+# Backend build output
+backend/target/
+backend/.mvn/wrapper/maven-wrapper.jar
+
+# Frontend (see also frontend/.gitignore)
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/next-env.d.ts
+*.tsbuildinfo
+
+# Logs
+*.log
+logs/
+
+# IDE / OS
+.idea/
+*.iml
+.vscode/
+.settings/
+.project
+.classpath
+.DS_Store
+Thumbs.db

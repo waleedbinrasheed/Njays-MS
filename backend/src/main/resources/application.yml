@@ -1,0 +1,51 @@
+# Database credentials are never committed. Supply them via environment variables
+# (DB_HOST, DB_PORT, DB_USERNAME, DB_PASSWORD) or a git-ignored application-local.yml next to
+# where the app is started (see application-local.example.yml).
+spring:
+  application:
+    name: inventory-backend
+  config:
+    import: "optional:file:./application-local.yml"
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:inventory}
+    username: ${DB_USERNAME:inventory_app}
+    password: ${DB_PASSWORD:}
+    hikari:
+      maximum-pool-size: 10
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+
+server:
+  port: ${SERVER_PORT:8080}
+  # Only the Next.js server talks to the API; keep it off the LAN by default.
+  address: ${SERVER_ADDRESS:127.0.0.1}
+  error:
+    include-stacktrace: never
+    include-message: never
+    include-binding-errors: never
+    include-exception: false
+  servlet:
+    session:
+      # Inactivity timeout; the user is logged out after this much idle time.
+      timeout: ${SESSION_TIMEOUT:30m}
+      cookie:
+        name: IMS_SESSION
+        http-only: true
+        same-site: lax
+        secure: ${SESSION_COOKIE_SECURE:false}
+
+logging:
+  level:
+    root: INFO
