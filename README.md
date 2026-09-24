@@ -27,7 +27,23 @@ Then create `backend/application-local.yml` (git-ignored) from the example and s
 cp backend/application-local.example.yml backend/application-local.yml
 ```
 
-Environment variables `DB_URL`, `DB_USERNAME`, `DB_PASSWORD` work instead of the file.
+Environment variables (`DB_HOST`, `DB_PORT`, `DB_USERNAME`, `DB_PASSWORD`) work instead of the file.
+
+## First sign-in
+
+On first start against an empty database the backend creates the administrator `admin` and prints a
+**temporary password** in the backend console, inside a box titled "First administrator created".
+Sign in with it; you will be asked to choose a new password before anything else.
+
+To choose the temporary password yourself, set it before the first start in `application-local.yml`:
+
+```yaml
+app:
+  bootstrap:
+    admin-password: SomeTemp123
+```
+
+(or the `ADMIN_INITIAL_PASSWORD` environment variable). It is only used when no users exist.
 
 ## Run (development)
 
@@ -55,9 +71,10 @@ cd frontend && npm run lint && npm run typecheck && npm run build
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `DB_URL` | `jdbc:postgresql://localhost:5432/inventory` | Database |
+| `DB_HOST` / `DB_PORT` / `DB_NAME` | `localhost` / `5432` / `inventory` | Database location |
 | `DB_USERNAME` / `DB_PASSWORD` | `inventory_app` / — | Database login |
-| `SESSION_TIMEOUT` | `30m` | Inactivity logout |
+| `SESSION_TIMEOUT` | `30m` | Inactivity logout (e.g. `15m`, `1h`) |
+| `ADMIN_INITIAL_PASSWORD` | random | Temporary password for the first `admin` (empty database only) |
 | `SERVER_ADDRESS` / `SERVER_PORT` | `127.0.0.1` / `8080` | Backend bind (keep on localhost) |
 | `SESSION_COOKIE_SECURE` | `false` | Set `true` if served over HTTPS |
 | `BACKEND_URL` (frontend) | `http://localhost:8080` | Where Next.js proxies `/api` |

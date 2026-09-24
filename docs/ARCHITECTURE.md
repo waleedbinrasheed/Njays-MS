@@ -19,7 +19,16 @@ one company-wide inventory, one stock location.
   cookie and CSRF cookie are same-origin and the API port is not exposed on the LAN.
 - Auth: server-side HTTP session, `IMS_SESSION` cookie (HttpOnly, SameSite=Lax), idle timeout
   `SESSION_TIMEOUT` (default 30m). CSRF: `XSRF-TOKEN` cookie → `X-XSRF-TOKEN` header.
-- Every authorization decision is made in the backend (`@PreAuthorize` on permissions).
+- Every authorization decision is made in the backend: coarse URL rules in `SecurityConfig`
+  (checked before request bodies are read) plus `@PreAuthorize` permission checks on controllers.
+- `SessionUserRefreshFilter` reloads the user on every request, so deactivation and role changes
+  take effect immediately, and a pending password change blocks everything except the
+  password-change endpoints.
+- No privilege escalation: a user can only assign roles, edit users, or edit roles whose
+  permissions they hold themselves. At least one active ADMIN always remains.
+- Login verifies the password before revealing that an account is inactive; unknown user and
+  wrong password return the same message. A new session id is issued on login and the CSRF token
+  is rotated.
 
 ## Backend (`backend/`, package `com.inventory`)
 

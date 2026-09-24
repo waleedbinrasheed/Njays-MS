@@ -6,6 +6,8 @@ const backendUrl = process.env.BACKEND_URL ?? "http://localhost:8080";
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  // Lets a second build (e.g. for testing against another backend) live beside the normal one.
+  distDir: process.env.NEXT_DIST_DIR || ".next",
   // Pin the project root so stray lockfiles in parent folders are ignored.
   outputFileTracingRoot: __dirname,
   async rewrites() {

@@ -11,15 +11,21 @@ export class ApiError extends Error {
   }
 }
 
-type UnauthorizedListener = () => void;
-let onUnauthorized: UnauthorizedListener | null = null;
+let onUnauthorized: (() => void) | null = null;
+let onActivity: (() => void) | null = null;
 
 /** Registered by the auth layer so an expired session anywhere sends the user to login. */
-export function setUnauthorizedListener(listener: UnauthorizedListener | null) {
+export function setUnauthorizedListener(listener: (() => void) | null) {
   onUnauthorized = listener;
 }
 
+/** Called after every successful call; each one also renews the server session. */
+export function setActivityListener(listener: (() => void) | null) {
+  onActivity = listener;
+}
+
 const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
+const CSRF_EXPIRED_PREFIX = "Security token";
 
 function readCookie(name: string): string | undefined {
   return document.cookie
@@ -28,10 +34,10 @@ function readCookie(name: string): string | undefined {
     ?.slice(name.length + 1);
 }
 
-async function ensureCsrfToken(): Promise<string | undefined> {
-  let token = readCookie("XSRF-TOKEN");
+async function csrfToken(forceRefresh = false): Promise<string | undefined> {
+  let token = forceRefresh ? undefined : readCookie("XSRF-TOKEN");
   if (!token) {
-    // Any GET makes the backend issue the XSRF-TOKEN cookie.
+    // Any GET makes the backend issue a fresh XSRF-TOKEN cookie.
     await fetch("/api/health", { credentials: "same-origin" });
     token = readCookie("XSRF-TOKEN");
   }
@@ -43,54 +49,84 @@ export interface RequestOptions {
   body?: unknown;
   query?: Record<string, string | number | boolean | undefined | null>;
   signal?: AbortSignal;
+  /** A 401 from this call is an expected outcome (e.g. wrong password), not an expired session. */
+  skipAuthRedirect?: boolean;
 }
 
-/** Single entry point for backend calls: JSON, cookies, CSRF and error mapping. */
-export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const method = (options.method ?? "GET").toUpperCase();
-  const headers: Record<string, string> = { Accept: "application/json" };
-
-  if (options.body !== undefined) headers["Content-Type"] = "application/json";
-  if (!SAFE_METHODS.has(method)) {
-    const token = await ensureCsrfToken();
-    if (token) headers["X-XSRF-TOKEN"] = token;
-  }
-
+function buildUrl(path: string, query: RequestOptions["query"]): string {
   let url = `/api${path}`;
-  if (options.query) {
+  if (query) {
     const params = new URLSearchParams();
-    for (const [k, v] of Object.entries(options.query)) {
+    for (const [k, v] of Object.entries(query)) {
       if (v !== undefined && v !== null && v !== "") params.append(k, String(v));
     }
     const qs = params.toString();
     if (qs) url += `?${qs}`;
   }
+  return url;
+}
 
-  const response = await fetch(url, {
-    method,
-    headers,
-    credentials: "same-origin",
-    body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
-    signal: options.signal,
-  });
+async function toApiError(response: Response, url: string): Promise<ApiError> {
+  try {
+    return new ApiError((await response.json()) as ApiErrorBody);
+  } catch {
+    return new ApiError({
+      timestamp: new Date().toISOString(),
+      status: response.status,
+      message: response.status >= 500 ? "The server is unavailable. Please try again." : "Request failed",
+      path: url,
+    });
+  }
+}
 
-  if (response.status === 401) onUnauthorized?.();
+/** Single entry point for backend calls: JSON, cookies, CSRF and error mapping. */
+export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
+  const method = (options.method ?? "GET").toUpperCase();
+  const url = buildUrl(path, options.query);
 
-  if (!response.ok) {
-    let body: ApiErrorBody;
-    try {
-      body = await response.json();
-    } catch {
-      body = {
-        timestamp: new Date().toISOString(),
-        status: response.status,
-        message: response.status >= 500 ? "The server is unavailable. Please try again." : "Request failed",
-        path: url,
-      };
+  const send = async (refreshCsrf: boolean) => {
+    const headers: Record<string, string> = { Accept: "application/json" };
+    if (options.body !== undefined) headers["Content-Type"] = "application/json";
+    if (!SAFE_METHODS.has(method)) {
+      const token = await csrfToken(refreshCsrf);
+      if (token) headers["X-XSRF-TOKEN"] = token;
     }
-    throw new ApiError(body);
+    return fetch(url, {
+      method,
+      headers,
+      credentials: "same-origin",
+      body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
+      signal: options.signal,
+    });
+  };
+
+  let response: Response;
+  try {
+    response = await send(false);
+  } catch (err) {
+    if (err instanceof DOMException && err.name === "AbortError") throw err;
+    throw new ApiError({
+      timestamp: new Date().toISOString(),
+      status: 0,
+      message: "Cannot reach the server. Check your network connection.",
+      path: url,
+    });
   }
 
+  let error: ApiError | null = response.ok ? null : await toApiError(response, url);
+
+  // A stale CSRF cookie (e.g. right after login/logout) is retried once with a fresh token.
+  if (error && error.status === 403 && error.message.startsWith(CSRF_EXPIRED_PREFIX)) {
+    response = await send(true);
+    error = response.ok ? null : await toApiError(response, url);
+  }
+
+  if (error) {
+    if (error.status === 401 && !options.skipAuthRedirect) onUnauthorized?.();
+    throw error;
+  }
+
+  onActivity?.();
   if (response.status === 204) return undefined as T;
   return (await response.json()) as T;
 }

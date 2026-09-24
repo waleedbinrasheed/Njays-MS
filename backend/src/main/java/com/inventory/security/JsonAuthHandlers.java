@@ -9,6 +9,7 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.access.AccessDeniedHandler;
+import org.springframework.security.web.csrf.CsrfException;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
@@ -29,17 +30,19 @@ public class JsonAuthHandlers implements AuthenticationEntryPoint, AccessDeniedH
     @Override
     public void commence(HttpServletRequest request, HttpServletResponse response,
                          AuthenticationException authException) throws IOException {
-        write(response, request, HttpServletResponse.SC_UNAUTHORIZED, "Authentication required");
+        writeError(request, response, HttpServletResponse.SC_UNAUTHORIZED, "Authentication required");
     }
 
     @Override
     public void handle(HttpServletRequest request, HttpServletResponse response,
                        AccessDeniedException accessDeniedException) throws IOException {
-        // A missing/invalid CSRF token also lands here.
-        write(response, request, HttpServletResponse.SC_FORBIDDEN, "You do not have permission to perform this action");
+        String message = accessDeniedException instanceof CsrfException
+                ? "Security token missing or expired. Please reload the page and try again"
+                : "You do not have permission to perform this action";
+        writeError(request, response, HttpServletResponse.SC_FORBIDDEN, message);
     }
 
-    private void write(HttpServletResponse response, HttpServletRequest request, int status, String message)
+    public void writeError(HttpServletRequest request, HttpServletResponse response, int status, String message)
             throws IOException {
         response.setStatus(status);
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
