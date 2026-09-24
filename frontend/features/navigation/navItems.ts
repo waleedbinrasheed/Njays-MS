@@ -22,9 +22,9 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     label: "Inventory",
     items: [
-      { label: "Inventory", href: "/inventory", permission: "INVENTORY_VIEW", ready: false },
-      { label: "Stock Movement", href: "/inventory/movements", permission: "INVENTORY_VIEW", ready: false },
-      { label: "Stock Adjustment", href: "/inventory/adjustments", permission: "STOCK_ADJUST", ready: false },
+      { label: "Inventory", href: "/inventory", permission: "INVENTORY_VIEW", ready: true },
+      { label: "Stock Movement", href: "/inventory/movements", permission: "INVENTORY_VIEW", ready: true },
+      { label: "Stock Adjustment", href: "/inventory/adjustments", permission: "STOCK_ADJUST", ready: true },
     ],
   },
   {

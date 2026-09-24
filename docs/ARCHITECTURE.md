@@ -60,6 +60,14 @@ one company-wide inventory, one stock location.
   `PURCHASE_CANCEL`, `SALE_CANCEL`.
 - Saved sales/purchases are immutable. Cancelling writes reversing movements; returns do
   partial reversals referencing the original document line.
+- `InventoryService` methods are `Propagation.MANDATORY`: they refuse to run unless the calling
+  business operation already opened a transaction, so a stock change can never commit on its own.
+- Stock adjustments carry the quantity the user saw (`expectedCurrentQuantity`); if stock moved in
+  the meantime the adjustment is rejected (409) instead of being applied to an unseen number.
+- There is deliberately no API that sets a quantity directly. Reorder level (stock-row setting,
+  permission `STOCK_ADJUST`) is the only editable inventory field.
+- `InventoryConcurrencyIT` commits real data from parallel threads and checks: no overselling,
+  no lost updates, all-or-nothing multi-line documents, and `quantity = SUM(ledger)` for every product.
 
 ### Other design decisions
 

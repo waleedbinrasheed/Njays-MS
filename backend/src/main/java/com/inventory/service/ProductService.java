@@ -10,8 +10,10 @@ import com.inventory.exception.BusinessException;
 import com.inventory.exception.ResourceNotFoundException;
 import com.inventory.mapper.MasterDataMapper;
 import com.inventory.repository.CategoryRepository;
+import com.inventory.repository.InventoryRepository;
 import com.inventory.repository.ProductRepository;
 import com.inventory.repository.PublisherRepository;
+import com.inventory.repository.StockTransactionRepository;
 import com.inventory.validation.Isbn;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -27,6 +29,7 @@ import static com.inventory.repository.ProductSpecifications.matches;
 import static com.inventory.repository.ProductSpecifications.publisher;
 import static com.inventory.service.MasterDataSupport.checkVersion;
 import static com.inventory.service.MasterDataSupport.deleteIfUnused;
+import static com.inventory.service.MasterDataSupport.inUse;
 import static com.inventory.service.MasterDataSupport.trimToNull;
 
 @Service
@@ -35,11 +38,19 @@ public class ProductService {
     private final ProductRepository products;
     private final PublisherRepository publishers;
     private final CategoryRepository categories;
+    private final InventoryService inventoryService;
+    private final InventoryRepository inventories;
+    private final StockTransactionRepository stockTransactions;
 
-    public ProductService(ProductRepository products, PublisherRepository publishers, CategoryRepository categories) {
+    public ProductService(ProductRepository products, PublisherRepository publishers, CategoryRepository categories,
+                          InventoryService inventoryService, InventoryRepository inventories,
+                          StockTransactionRepository stockTransactions) {
         this.products = products;
         this.publishers = publishers;
         this.categories = categories;
+        this.inventoryService = inventoryService;
+        this.inventories = inventories;
+        this.stockTransactions = stockTransactions;
     }
 
     public record ProductFilter(String search, Boolean active, Long publisherId, Long categoryId) {
@@ -66,7 +77,9 @@ public class ProductService {
         }
         Product product = new Product();
         apply(product, request, isbn);
-        return MasterDataMapper.toResponse(products.save(product));
+        Product saved = products.save(product);
+        inventoryService.initialize(saved);
+        return MasterDataMapper.toResponse(saved);
     }
 
     @Transactional
@@ -81,11 +94,19 @@ public class ProductService {
         return MasterDataMapper.toResponse(products.saveAndFlush(product));
     }
 
-    /** Products with stock history or sales are protected by foreign keys (Phase 4+). */
+    /**
+     * Only a product that never had stock movements can be deleted (its empty stock row goes with it);
+     * anything with history is protected by foreign keys and must be deactivated instead.
+     */
     @Transactional
     public void delete(Long id) {
         Product product = load(id);
-        deleteIfUnused(products, product, "Product '" + product.getTitle() + "'");
+        String label = "Product '" + product.getTitle() + "'";
+        if (stockTransactions.existsByProductId(id)) {
+            throw inUse(label);
+        }
+        inventories.findDetailedByProductId(id).ifPresent(inventories::delete);
+        deleteIfUnused(products, product, label);
     }
 
     private void apply(Product p, ProductRequest r, String isbn) {

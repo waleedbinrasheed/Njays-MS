@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { AsyncSelect, type Option } from "@/components/ui/AsyncSelect";
+import { FilterSelect } from "./FilterSelect";
 import { Checkbox, TextField } from "@/components/ui/FormField";
 import { FormDialog } from "@/components/ui/FormDialog";
 import { useEntityForm } from "@/hooks/useEntityForm";
@@ -187,20 +188,5 @@ export function ProductsPage() {
         </>
       }
     />
-  );
-}
-
-/** Compact picker for the filter bar (label visually hidden). */
-function FilterSelect({ placeholder, ...props }: {
-  label: string;
-  placeholder: string;
-  value: Option | null;
-  onChange: (o: Option | null) => void;
-  load: (s: string, signal: AbortSignal) => Promise<Option[]>;
-}) {
-  return (
-    <div className="[&_label]:sr-only">
-      <AsyncSelect {...props} placeholder={placeholder} />
-    </div>
   );
 }

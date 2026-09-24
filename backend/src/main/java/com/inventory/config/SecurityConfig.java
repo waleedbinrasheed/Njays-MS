@@ -66,6 +66,10 @@ public class SecurityConfig {
                         .requestMatchers("/api/roles/**", "/api/permissions/**").hasAuthority("ROLE_MANAGE")
                         .requestMatchers(HttpMethod.GET, MASTER_DATA).hasAuthority("MASTER_DATA_VIEW")
                         .requestMatchers(MASTER_DATA).hasAuthority("MASTER_DATA_MANAGE")
+                        .requestMatchers(HttpMethod.PUT, "/api/inventory/*/reorder-level").hasAuthority("STOCK_ADJUST")
+                        .requestMatchers(HttpMethod.POST, "/api/stock-adjustments").hasAuthority("STOCK_ADJUST")
+                        .requestMatchers(HttpMethod.GET, "/api/inventory/**", "/api/stock-transactions/**",
+                                "/api/stock-adjustments/**").hasAuthority("INVENTORY_VIEW")
                         .requestMatchers("/api/**").authenticated()
                         .anyRequest().denyAll())
                 .addFilterBefore(new SessionUserRefreshFilter(userDetailsService, contextRepository, authHandlers),

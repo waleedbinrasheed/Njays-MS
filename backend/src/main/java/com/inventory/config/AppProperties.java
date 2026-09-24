@@ -4,9 +4,13 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 
 import java.time.Duration;
 
-/** Application settings under the {@code app.*} prefix. */
+/**
+ * Application settings under the {@code app.*} prefix.
+ *
+ * @param timezone the shop's time zone; "today", "this month" and date filters use it
+ */
 @ConfigurationProperties(prefix = "app")
-public record AppProperties(Security security, Bootstrap bootstrap) {
+public record AppProperties(Security security, Bootstrap bootstrap, String timezone) {
 
     /**
      * @param sessionTimeout inactivity period after which the user must sign in again
@@ -30,5 +34,6 @@ public record AppProperties(Security security, Bootstrap bootstrap) {
     public AppProperties {
         if (security == null) security = new Security(null);
         if (bootstrap == null) bootstrap = new Bootstrap(null, null);
+        if (timezone == null || timezone.isBlank()) timezone = "Asia/Karachi";
     }
 }
