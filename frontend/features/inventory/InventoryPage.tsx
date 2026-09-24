@@ -11,6 +11,7 @@ import { Modal } from "@/components/ui/Modal";
 import { Pagination } from "@/components/ui/Pagination";
 import { SortableHeader, nextSort, toSortParam, type SortState } from "@/components/ui/SortableHeader";
 import { Spinner } from "@/components/ui/Spinner";
+import { StatTile } from "@/components/ui/StatTile";
 import { useToast } from "@/components/ui/Toast";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { FilterSelect } from "@/features/master/FilterSelect";
@@ -26,6 +27,7 @@ import { AdjustmentForm } from "./AdjustmentForm";
 
 const PAGE_SIZE = 25;
 const LEVEL_TONE: Record<StockLevel, "red" | "amber" | "green"> = { OUT_OF_STOCK: "red", LOW: "amber", OK: "green" };
+const fmt = (n: number | undefined) => (n === undefined ? "–" : n.toLocaleString("en-PK"));
 
 export function InventoryPage() {
   const toast = useToast();
@@ -89,18 +91,20 @@ export function InventoryPage() {
       />
 
       <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <SummaryCard label="Products" value={summary.data?.totalProducts} />
-        <SummaryCard label="Units in stock" value={summary.data?.totalQuantity} />
-        <SummaryCard
+        <StatTile label="Products" value={fmt(summary.data?.totalProducts)} />
+        <StatTile label="Units in stock" value={fmt(summary.data?.totalQuantity)} />
+        <StatTile
           label="Low stock"
-          value={summary.data?.lowStockProducts}
-          tone="amber"
+          value={fmt(summary.data?.lowStockProducts)}
+          status={summary.data?.lowStockProducts ? { tone: "warning", text: "Needs reorder" } : undefined}
+          detail="Show"
           onClick={() => resetPage(setStatus)("LOW")}
         />
-        <SummaryCard
+        <StatTile
           label="Out of stock"
-          value={summary.data?.outOfStockProducts}
-          tone="red"
+          value={fmt(summary.data?.outOfStockProducts)}
+          status={summary.data?.outOfStockProducts ? { tone: "critical", text: "Cannot be sold" } : undefined}
+          detail="Show"
           onClick={() => resetPage(setStatus)("OUT")}
         />
       </div>
@@ -246,34 +250,6 @@ export function InventoryPage() {
         />
       )}
     </>
-  );
-}
-
-function SummaryCard({
-  label,
-  value,
-  tone,
-  onClick,
-}: {
-  label: string;
-  value: number | undefined;
-  tone?: "amber" | "red";
-  onClick?: () => void;
-}) {
-  const color = tone === "red" ? "text-red-600" : tone === "amber" ? "text-amber-600" : "text-slate-900";
-  const content = (
-    <>
-      <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{label}</p>
-      <p className={`mt-1 text-2xl font-semibold tabular-nums ${color}`}>{value === undefined ? "–" : value.toLocaleString("en-PK")}</p>
-    </>
-  );
-  const base = "rounded-lg border border-slate-200 bg-white px-4 py-3 text-left";
-  return onClick ? (
-    <button type="button" onClick={onClick} className={`${base} hover:border-slate-300 hover:bg-slate-50`}>
-      {content}
-    </button>
-  ) : (
-    <div className={base}>{content}</div>
   );
 }
 

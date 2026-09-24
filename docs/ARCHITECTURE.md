@@ -105,6 +105,11 @@ one company-wide inventory, one stock location.
   remainder so refunds never exceed what was charged; the invoice-level discount is not apportioned.
   Returns are immutable. Cancelled documents cannot be returned, and a document with returns can no
   longer be cancelled (return the rest instead). Purchase returns are refused if the stock is gone.
+- **Dashboard & reports:** computed live with plain SQL (`ReportRepository`, bound parameters only,
+  ORDER BY from whitelists). Sales/purchase figures count COMPLETED documents by document date in the
+  shop's time zone; cancelled documents are listed in reports but excluded from totals. Report totals
+  cover all matching rows, not just the page. The dashboard omits any section the viewer lacks the
+  permission for. Inventory stock value = quantity × product purchase price.
 - **Numbering:** `document_sequence` upsert inside the document transaction; the year is the year the
   document is entered. `PurchaseConcurrencyIT` proves concurrent saves get consecutive unique numbers
   and a failed save consumes none.

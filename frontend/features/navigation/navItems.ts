@@ -56,11 +56,11 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     label: "Reports",
     items: [
-      { label: "Inventory Report", href: "/reports/inventory", permission: "REPORT_VIEW", ready: false },
-      { label: "Sales Report", href: "/reports/sales", permission: "REPORT_VIEW", ready: false },
-      { label: "Purchase Report", href: "/reports/purchases", permission: "REPORT_VIEW", ready: false },
-      { label: "Stock Movement Report", href: "/reports/stock-movement", permission: "REPORT_VIEW", ready: false },
-      { label: "Low Stock Report", href: "/reports/low-stock", permission: "REPORT_VIEW", ready: false },
+      { label: "Inventory Report", href: "/reports/inventory", permission: "REPORT_VIEW", ready: true },
+      { label: "Sales Report", href: "/reports/sales", permission: "REPORT_VIEW", ready: true },
+      { label: "Purchase Report", href: "/reports/purchases", permission: "REPORT_VIEW", ready: true },
+      { label: "Stock Movement Report", href: "/reports/stock-movement", permission: "REPORT_VIEW", ready: true },
+      { label: "Low Stock Report", href: "/reports/low-stock", permission: "REPORT_VIEW", ready: true },
     ],
   },
   {
