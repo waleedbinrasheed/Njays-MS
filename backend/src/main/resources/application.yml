@@ -7,7 +7,8 @@ spring:
   config:
     import: "optional:file:./application-local.yml"
   datasource:
-    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:inventory}
+    # DB_URL (full JDBC URL, e.g. for Neon with ?sslmode=require) overrides host/port/name.
+    url: ${DB_URL:jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:inventory}}
     username: ${DB_USERNAME:inventory_app}
     password: ${DB_PASSWORD:}
     hikari:
@@ -34,7 +35,8 @@ spring:
       write-dates-as-timestamps: false
 
 server:
-  port: ${SERVER_PORT:8080}
+  # Hosting platforms such as Render provide PORT.
+  port: ${SERVER_PORT:${PORT:8080}}
   # Only the Next.js server talks to the API; keep it off the LAN by default.
   address: ${SERVER_ADDRESS:127.0.0.1}
   error:

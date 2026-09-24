@@ -1,0 +1,48 @@
+# Render Blueprint for the client-review demo (free plan, no Docker).
+# Database: Neon (free PostgreSQL). See docs/DEPLOY-RENDER.md for the step-by-step guide.
+# Values marked "sync: false" are secrets/URLs you enter in the Render dashboard; they are never
+# stored in this repository.
+services:
+  # Spring Boot API. Only reached through the frontend's /api proxy.
+  - type: web
+    name: leadingims-api
+    runtime: node            # any native runtime works; the build script downloads JDK 21 itself
+    plan: free
+    region: singapore
+    rootDir: backend
+    buildCommand: bash scripts/render-build.sh
+    startCommand: bash scripts/render-start.sh
+    healthCheckPath: /api/health
+    envVars:
+      - key: DB_URL                  # jdbc:postgresql://<neon-host>/<db>?sslmode=require
+        sync: false
+      - key: DB_USERNAME
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: ADMIN_INITIAL_PASSWORD  # temporary password of the first "admin" (must be changed at first login)
+        sync: false
+      - key: BUSINESS_NAME
+        sync: false
+      - key: SERVER_ADDRESS          # Render routes traffic to the container, so listen on all interfaces
+        value: 0.0.0.0
+      - key: SESSION_COOKIE_SECURE   # the site is served over HTTPS
+        value: "true"
+      - key: SESSION_TIMEOUT
+        value: 30m
+
+  # Next.js frontend: the URL you give the client.
+  - type: web
+    name: leadingims-web
+    runtime: node
+    plan: free
+    region: singapore
+    rootDir: frontend
+    buildCommand: npm ci && npm run build
+    startCommand: npm run start
+    healthCheckPath: /login
+    envVars:
+      - key: NODE_VERSION
+        value: 20.18.1
+      - key: BACKEND_URL             # e.g. https://leadingims-api.onrender.com (needed at build time)
+        sync: false

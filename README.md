@@ -2,6 +2,7 @@
 
 Inventory, purchase and sales management for a single book business, used over the local network.
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the design and phase plan.
+A free cloud demo for client review can be set up with [docs/DEPLOY-RENDER.md](docs/DEPLOY-RENDER.md).
 
 | Part | Tech |
 |---|---|

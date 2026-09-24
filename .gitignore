@@ -8,6 +8,9 @@ application-local.properties
 
 # Backend build output
 backend/target/
+# JDK and jar produced by the Render build script
+backend/.jdk/
+backend/app.jar
 backend/.mvn/wrapper/maven-wrapper.jar
 
 # Frontend (see also frontend/.gitignore)

@@ -10,6 +10,11 @@ const nextConfig: NextConfig = {
   distDir: process.env.NEXT_DIST_DIR || ".next",
   // Pin the project root so stray lockfiles in parent folders are ignored.
   outputFileTracingRoot: __dirname,
+  experimental: {
+    // Free hosting puts the backend to sleep; waking it can take over a minute, so let the /api
+    // proxy wait up to 2 minutes instead of failing after the default 30 seconds.
+    proxyTimeout: 120_000,
+  },
   async rewrites() {
     return [{ source: "/api/:path*", destination: `${backendUrl}/api/:path*` }];
   },
