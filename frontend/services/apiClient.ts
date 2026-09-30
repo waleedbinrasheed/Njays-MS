@@ -51,6 +51,26 @@ export interface RequestOptions {
   signal?: AbortSignal;
   /** A 401 from this call is an expected outcome (e.g. wrong password), not an expired session. */
   skipAuthRedirect?: boolean;
+  /**
+   * Retry while the server is starting (502/503/504 from the hosting proxy). On by default for reads;
+   * only enable it for writes that are safe to repeat, such as login.
+   */
+  retryWhileStarting?: boolean;
+}
+
+/** Hosting proxies answer these while a sleeping server wakes up; the request never reached the app. */
+const STARTING_STATUSES = new Set([502, 503, 504]);
+const STARTING_RETRY_DELAY_MS = 5_000;
+const STARTING_MAX_ATTEMPTS = 24; // about 2 minutes
+
+function wait(ms: number, signal?: AbortSignal) {
+  return new Promise<void>((resolve, reject) => {
+    const timer = setTimeout(resolve, ms);
+    signal?.addEventListener("abort", () => {
+      clearTimeout(timer);
+      reject(new DOMException("Aborted", "AbortError"));
+    });
+  });
 }
 
 function buildUrl(path: string, query: RequestOptions["query"]): string {
@@ -100,9 +120,15 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
     });
   };
 
+  const retryWhileStarting = options.retryWhileStarting ?? SAFE_METHODS.has(method);
+
   let response: Response;
   try {
     response = await send(false);
+    for (let attempt = 1; retryWhileStarting && STARTING_STATUSES.has(response.status) && attempt < STARTING_MAX_ATTEMPTS; attempt++) {
+      await wait(STARTING_RETRY_DELAY_MS, options.signal);
+      response = await send(false);
+    }
   } catch (err) {
     if (err instanceof DOMException && err.name === "AbortError") throw err;
     throw new ApiError({

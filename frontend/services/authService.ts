@@ -7,6 +7,8 @@ export const authService = {
       method: "POST",
       body: { username, password },
       skipAuthRedirect: true,
+      // Safe to repeat: a 502/503/504 means the sleeping server has not received it yet.
+      retryWhileStarting: true,
     }),
 
   logout: () => apiRequest<void>("/auth/logout", { method: "POST", skipAuthRedirect: true }),

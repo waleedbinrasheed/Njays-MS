@@ -19,6 +19,17 @@ export function LoginForm() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [slow, setSlow] = useState(false);
+
+  // A sign-in that takes this long means the server is waking up (free hosting); say so.
+  useEffect(() => {
+    if (!submitting) return;
+    const timer = setTimeout(() => setSlow(true), 4_000);
+    return () => {
+      clearTimeout(timer);
+      setSlow(false);
+    };
+  }, [submitting]);
 
   // Already signed in (e.g. opened /login in a second tab).
   useEffect(() => {
@@ -55,6 +66,11 @@ export function LoginForm() {
       {error && (
         <p role="alert" className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
           {error}
+        </p>
+      )}
+      {slow && !error && (
+        <p role="status" className="rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-800">
+          The server is starting up. This can take up to two minutes after a quiet period; please wait.
         </p>
       )}
       <TextField
