@@ -10,6 +10,9 @@ import com.inventory.dto.report.ReportDtos.LowStockSummary;
 import com.inventory.dto.report.ReportDtos.MovementRow;
 import com.inventory.dto.report.ReportDtos.MovementSummary;
 import com.inventory.dto.report.ReportDtos.ReportPage;
+import com.inventory.dto.report.ReportDtos.RepresentativeRow;
+import com.inventory.dto.report.ReportDtos.RepresentativeSummary;
+import com.inventory.repository.ReportRepository.RepresentativeFilter;
 import com.inventory.entity.DocumentStatus;
 import com.inventory.entity.PaymentStatus;
 import com.inventory.entity.TransactionType;
@@ -74,12 +77,25 @@ public class ReportController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
             @RequestParam(required = false) Long customerId,
+            @RequestParam(required = false) Long representativeId,
             @RequestParam(required = false) Long productId,
             @RequestParam(required = false) PaymentStatus paymentStatus,
             @RequestParam(required = false) DocumentStatus status,
             @PageableDefault(size = 50) Pageable pageable) {
         return reports.documents(DocumentKind.SALE,
-                new DocumentFilter(from, to, customerId, productId, paymentStatus, status), pageable);
+                new DocumentFilter(from, to, customerId, representativeId, productId, paymentStatus, status), pageable);
+    }
+
+    @GetMapping("/api/reports/representatives")
+    @PreAuthorize("hasAuthority('REPORT_VIEW')")
+    public ReportPage<RepresentativeRow, RepresentativeSummary> representatives(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
+            @RequestParam(required = false) Long representativeId,
+            @RequestParam(required = false) String area,
+            @RequestParam(required = false) Boolean active,
+            @PageableDefault(size = 50) Pageable pageable) {
+        return reports.representatives(new RepresentativeFilter(from, to, representativeId, area, active), pageable);
     }
 
     @GetMapping("/api/reports/purchases")
@@ -93,7 +109,7 @@ public class ReportController {
             @RequestParam(required = false) DocumentStatus status,
             @PageableDefault(size = 50) Pageable pageable) {
         return reports.documents(DocumentKind.PURCHASE,
-                new DocumentFilter(from, to, supplierId, productId, paymentStatus, status), pageable);
+                new DocumentFilter(from, to, supplierId, null, productId, paymentStatus, status), pageable);
     }
 
     @GetMapping("/api/reports/stock-movement")

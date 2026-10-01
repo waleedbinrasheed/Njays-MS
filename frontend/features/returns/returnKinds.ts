@@ -21,7 +21,7 @@ export const RETURN_KINDS: Record<ReturnKind, ReturnKindConfig> = {
     kind: "sale",
     title: "Sales Returns",
     documentLabel: "Invoice",
-    partyLabel: "Customer",
+    partyLabel: "Representative",
     amountLabel: "Refund",
     stockEffect: "added back to stock",
     viewPermission: "SALE_VIEW",

@@ -47,7 +47,7 @@ import java.util.stream.Collectors;
 import static com.inventory.service.MasterDataSupport.trimToNull;
 
 /**
- * Sales return: a customer brings back some or all items of an invoice; stock goes back up.
+ * Sales return: the representative brings back some or all items of an invoice; stock goes back up.
  * The original sale row is locked while a return is recorded, so two returns of the same
  * sale are serialised and together can never exceed what was on it.
  */
@@ -166,7 +166,11 @@ public class SaleReturnService {
                 userDirectory.ref(r.getCreatedBy()), r.getCreatedAt());
     }
 
+    /** The buyer credited by the return: the representative, or the customer on pre-representative invoices. */
     private static Ref partyOf(Sale d) {
+        if (d.getRepresentative() != null) {
+            return new Ref(d.getRepresentative().getId(), d.getRepresentative().getName());
+        }
         return new Ref(d.getCustomer().getId(), d.getCustomer().getName());
     }
 

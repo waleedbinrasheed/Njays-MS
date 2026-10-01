@@ -44,7 +44,8 @@ class MasterDataIT extends ApiTestBase {
     @ValueSource(strings = {"/api/publishers", "/api/categories", "/api/suppliers", "/api/customers"})
     void crudSearchAndDelete(String path) throws Exception {
         String name = TestUsers.uniqueName("Item");
-        JsonNode created = read(mvc.perform(withJson(post(path), Map.of("name", name, "email", "a@b.pk")).session(admin))
+        JsonNode created = read(mvc.perform(withJson(post(path), withRep(path, Map.of("name", name, "email", "a@b.pk")))
+                        .session(admin))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.active").value(true))
                 .andReturn());
@@ -53,7 +54,7 @@ class MasterDataIT extends ApiTestBase {
         mvc.perform(get(path).param("search", name.toLowerCase()).session(admin))
                 .andExpect(jsonPath("$.totalElements").value(1));
 
-        mvc.perform(withJson(put(path + "/" + id), Map.of("name", name + " renamed", "active", false, "version", 0))
+        mvc.perform(withJson(put(path + "/" + id), withRep(path, Map.of("name", name + " renamed", "active", false, "version", 0)))
                         .session(admin))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.active").value(false));
@@ -108,8 +109,9 @@ class MasterDataIT extends ApiTestBase {
 
     @Test
     void customersWithTheSameNameAreAllowed() throws Exception {
-        mvc.perform(withJson(post("/api/customers"), Map.of("name", "Ali Raza")).session(admin)).andExpect(status().isCreated());
-        mvc.perform(withJson(post("/api/customers"), Map.of("name", "Ali Raza")).session(admin)).andExpect(status().isCreated());
+        Map<String, Object> ali = Map.of("name", "Ali Raza", "representativeId", counterRepresentativeId());
+        mvc.perform(withJson(post("/api/customers"), ali).session(admin)).andExpect(status().isCreated());
+        mvc.perform(withJson(post("/api/customers"), ali).session(admin)).andExpect(status().isCreated());
     }
 
     @Test
@@ -128,6 +130,14 @@ class MasterDataIT extends ApiTestBase {
         mvc.perform(get(path).session(normal)).andExpect(status().isOk());
         mvc.perform(withJson(post(path), Map.of("name", "Nope")).session(normal)).andExpect(status().isForbidden());
         mvc.perform(delete(path + "/1").with(csrf()).session(normal)).andExpect(status().isForbidden());
+    }
+
+    /** Customers must name their representative; other master data does not have one. */
+    private Map<String, Object> withRep(String path, Map<String, Object> body) {
+        if (!path.equals("/api/customers")) return body;
+        Map<String, Object> copy = new java.util.HashMap<>(body);
+        copy.put("representativeId", counterRepresentativeId());
+        return copy;
     }
 
     @Test

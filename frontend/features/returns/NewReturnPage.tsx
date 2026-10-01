@@ -29,7 +29,8 @@ interface DocumentHeader {
 async function loadHeader(kind: ReturnKind, id: number, signal: AbortSignal): Promise<DocumentHeader> {
   if (kind === "sale") {
     const s = await saleService.get(id, signal);
-    return { number: s.invoiceNumber, date: s.saleDate, party: s.customer.name, cancelled: s.status === "CANCELLED" };
+    const party = s.representative?.name ?? s.customer?.name ?? "-";
+    return { number: s.invoiceNumber, date: s.saleDate, party, cancelled: s.status === "CANCELLED" };
   }
   const p = await purchaseService.get(id, signal);
   return { number: p.purchaseNumber, date: p.purchaseDate, party: p.supplier.name, cancelled: p.status === "CANCELLED" };

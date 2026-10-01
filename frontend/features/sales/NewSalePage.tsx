@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useMemo, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { AsyncSelect, type Option } from "@/components/ui/AsyncSelect";
 import { Button } from "@/components/ui/Button";
@@ -10,11 +10,11 @@ import { SelectField, TextAreaField, TextField } from "@/components/ui/FormField
 import { useToast } from "@/components/ui/Toast";
 import { LineItemsEditor, num, toPricedLine, type DraftLine } from "@/features/documents/LineItemsEditor";
 import { TotalsPanel } from "@/features/documents/TotalsPanel";
-import { loadCustomerOptions } from "@/features/master/lookups";
+import { loadRepresentativeOptions, representativeCustomerLoader } from "@/features/master/lookups";
 import { useApiQuery } from "@/hooks/useApiQuery";
 import { useUnsavedChangesWarning } from "@/hooks/useUnsavedChangesWarning";
 import { ApiError } from "@/services/apiClient";
-import { customerService } from "@/services/masterDataService";
+import { representativeService } from "@/services/masterDataService";
 import { saleService } from "@/services/saleService";
 import type { PaymentStatus } from "@/types/purchase";
 import { previewTotals } from "@/utils/documentTotals";
@@ -24,8 +24,9 @@ import { PAYMENT_STATUS_LABELS } from "@/utils/labels";
 export function NewSalePage() {
   const router = useRouter();
   const toast = useToast();
-  const walkIn = useApiQuery(() => customerService.walkIn(), []);
-  const [chosenCustomer, setChosenCustomer] = useState<Option | null | undefined>(undefined); // undefined = default
+  const counter = useApiQuery((signal) => representativeService.counter(signal), []);
+  const [chosenRep, setChosenRep] = useState<Option | null | undefined>(undefined); // undefined = Counter Sales
+  const [customer, setCustomer] = useState<Option | null>(null);
   const [date, setDate] = useState(todayIso());
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>("PAID");
   const [notes, setNotes] = useState("");
@@ -38,8 +39,19 @@ export function NewSalePage() {
 
   useUnsavedChangesWarning(lines.length > 0 && !saving);
 
-  const walkInOption = walkIn.data ? { id: walkIn.data.id, label: walkIn.data.name } : null;
-  const customer = chosenCustomer === undefined ? walkInOption : chosenCustomer;
+  const counterOption = counter.data ? { id: counter.data.id, label: counter.data.name, detail: counter.data.area ?? undefined } : null;
+  const representative = chosenRep === undefined ? counterOption : chosenRep;
+  const representativeId = representative?.id ?? null;
+  const customerLoader = useMemo(
+    () => (representativeId ? representativeCustomerLoader(representativeId) : null),
+    [representativeId],
+  );
+
+  function changeRepresentative(o: Option | null) {
+    setChosenRep(o);
+    // A customer belongs to one representative; a new representative means choosing again.
+    setCustomer(null);
+  }
 
   const totals = previewTotals(lines.map(toPricedLine), num(invoiceDiscount));
   const units = lines.reduce((n, l) => n + num(l.quantity), 0);
@@ -47,7 +59,7 @@ export function NewSalePage() {
   function review(e: FormEvent) {
     e.preventDefault();
     const local: Record<string, string> = {};
-    if (!customer) local.customer = "Choose a customer";
+    if (!representative) local.representative = "Choose the representative this sale is billed to";
     if (!date) local.date = "Sale date is required";
     else if (date > todayIso()) local.date = "Sale date cannot be in the future";
     if (lines.length === 0) local.lines = "Add at least one product";
@@ -64,11 +76,12 @@ export function NewSalePage() {
   }
 
   async function save() {
-    if (!customer) return;
+    if (!representative) return;
     setSaving(true);
     try {
       const saved = await saleService.create({
-        customerId: customer.id,
+        representativeId: representative.id,
+        customerId: customer?.id ?? null,
         saleDate: date,
         paymentStatus,
         invoiceDiscount: num(invoiceDiscount),
@@ -102,16 +115,28 @@ export function NewSalePage() {
           </p>
         )}
 
-        <section className="grid gap-4 rounded-lg border border-slate-200 bg-white p-4 sm:grid-cols-3">
+        <section className="grid gap-4 rounded-lg border border-slate-200 bg-white p-4 sm:grid-cols-2 lg:grid-cols-4">
           <AsyncSelect
-            label="Customer"
-            value={customer}
-            onChange={setChosenCustomer}
-            load={loadCustomerOptions}
-            error={errors.customer}
-            placeholder="Walk-in Customer"
+            label="Representative (billed to)"
+            value={representative}
+            onChange={changeRepresentative}
+            load={loadRepresentativeOptions}
+            error={errors.representative}
+            placeholder="Counter Sales"
             required
           />
+          {customerLoader ? (
+            <AsyncSelect
+              key={representative?.id}
+              label="For customer (optional)"
+              value={customer}
+              onChange={setCustomer}
+              load={customerLoader}
+              placeholder={`Any of ${representative?.label}'s customers`}
+            />
+          ) : (
+            <div />
+          )}
           <TextField label="Sale date" type="date" max={todayIso()} value={date} onChange={(e) => setDate(e.target.value)} error={errors.date} required />
           <SelectField label="Payment status" value={paymentStatus} onChange={(e) => setPaymentStatus(e.target.value as PaymentStatus)} required>
             {Object.entries(PAYMENT_STATUS_LABELS).map(([k, label]) => (
@@ -149,7 +174,8 @@ export function NewSalePage() {
         message={
           <div className="space-y-1">
             <p>
-              <strong>{customer?.label}</strong> · {date} · {PAYMENT_STATUS_LABELS[paymentStatus]}
+              Billed to <strong>{representative?.label}</strong>
+              {customer ? <> for {customer.label}</> : null} · {date} · {PAYMENT_STATUS_LABELS[paymentStatus]}
             </p>
             <p>
               {lines.length} product(s), {units} unit(s) will be taken from stock.

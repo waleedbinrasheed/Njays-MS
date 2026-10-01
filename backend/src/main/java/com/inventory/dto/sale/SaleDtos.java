@@ -2,6 +2,7 @@ package com.inventory.dto.sale;
 
 import com.inventory.dto.inventory.InventoryDtos.ProductRef;
 import com.inventory.dto.master.MasterDataDtos.Ref;
+import com.inventory.dto.master.MasterDataDtos.RepresentativeRef;
 import com.inventory.entity.DocumentStatus;
 import com.inventory.entity.PaymentStatus;
 import jakarta.validation.Valid;
@@ -40,8 +41,12 @@ public final class SaleDtos {
             @Digits(integer = 3, fraction = 2) BigDecimal taxPercent) {
     }
 
-    /** {@code customerId} may be omitted for counter sales: the walk-in customer is used. */
+    /**
+     * The buyer is the representative (use the built-in "Counter Sales" one for counter sales).
+     * {@code customerId} is optional and must be one of that representative's customers.
+     */
     public record CreateSaleRequest(
+            @NotNull(message = "Representative is required") Long representativeId,
             Long customerId,
             // "Not in the future" is checked in the service using the shop's time zone.
             @NotNull(message = "Sale date is required") LocalDate saleDate,
@@ -66,10 +71,12 @@ public final class SaleDtos {
             BigDecimal lineTotal) {
     }
 
+    /** {@code representative} is null on invoices from before representatives existed; {@code customer} may be null on new ones. */
     public record SaleSummary(
             Long id,
             String invoiceNumber,
             LocalDate saleDate,
+            RepresentativeRef representative,
             Ref customer,
             BigDecimal total,
             PaymentStatus paymentStatus,
@@ -82,6 +89,7 @@ public final class SaleDtos {
             Long id,
             String invoiceNumber,
             LocalDate saleDate,
+            RepresentativeRef representative,
             Ref customer,
             String customerPhone,
             String customerAddress,

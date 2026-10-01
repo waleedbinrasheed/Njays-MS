@@ -14,7 +14,7 @@ public final class SaleMapper {
 
     public static SaleSummary toSummary(Sale s, Ref createdBy) {
         return new SaleSummary(s.getId(), s.getInvoiceNumber(), s.getSaleDate(),
-                new Ref(s.getCustomer().getId(), s.getCustomer().getName()), s.getTotal(), s.getPaymentStatus(),
+                MasterDataMapper.ref(s.getRepresentative()), customerRef(s), s.getTotal(), s.getPaymentStatus(),
                 s.getStatus(), createdBy, s.getCreatedAt());
     }
 
@@ -23,9 +23,10 @@ public final class SaleMapper {
                 s.getId(),
                 s.getInvoiceNumber(),
                 s.getSaleDate(),
-                new Ref(s.getCustomer().getId(), s.getCustomer().getName()),
-                s.getCustomer().getPhone(),
-                s.getCustomer().getAddress(),
+                MasterDataMapper.ref(s.getRepresentative()),
+                customerRef(s),
+                s.getCustomer() == null ? null : s.getCustomer().getPhone(),
+                s.getCustomer() == null ? null : s.getCustomer().getAddress(),
                 s.getSubtotal(),
                 s.getInvoiceDiscount(),
                 s.getDiscountTotal(),
@@ -41,6 +42,10 @@ public final class SaleMapper {
                 s.getCancelledBy() == null ? null : InventoryMapper.userRef(s.getCancelledBy()),
                 s.getCancelReason(),
                 s.getVersion());
+    }
+
+    private static Ref customerRef(Sale s) {
+        return s.getCustomer() == null ? null : new Ref(s.getCustomer().getId(), s.getCustomer().getName());
     }
 
     private static SaleLine toLine(SaleItem i) {

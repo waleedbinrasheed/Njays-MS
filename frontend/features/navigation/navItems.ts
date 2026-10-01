@@ -50,6 +50,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { label: "Publishers", href: "/master/publishers", permission: "MASTER_DATA_VIEW", ready: true },
       { label: "Categories", href: "/master/categories", permission: "MASTER_DATA_VIEW", ready: true },
       { label: "Suppliers", href: "/master/suppliers", permission: "MASTER_DATA_VIEW", ready: true },
+      { label: "Representatives", href: "/master/representatives", permission: "MASTER_DATA_VIEW", ready: true },
       { label: "Customers", href: "/master/customers", permission: "MASTER_DATA_VIEW", ready: true },
     ],
   },
@@ -61,6 +62,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { label: "Purchase Report", href: "/reports/purchases", permission: "REPORT_VIEW", ready: true },
       { label: "Stock Movement Report", href: "/reports/stock-movement", permission: "REPORT_VIEW", ready: true },
       { label: "Low Stock Report", href: "/reports/low-stock", permission: "REPORT_VIEW", ready: true },
+      { label: "Representative Report", href: "/reports/representatives", permission: "REPORT_VIEW", ready: true },
     ],
   },
   {

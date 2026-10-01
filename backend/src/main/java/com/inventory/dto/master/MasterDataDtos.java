@@ -47,20 +47,50 @@ public final class MasterDataDtos {
             boolean active, long version, Instant createdAt, Instant updatedAt) {
     }
 
+    // --- Representatives ---
+
+    public record RepresentativeRequest(
+            @NotBlank(message = "Name is required") @Size(max = 150) String name,
+            @Pattern(regexp = PHONE_REGEX, message = PHONE_MESSAGE) String phone,
+            @Email(message = "Email address is not valid") @Size(max = 150) String email,
+            @Size(max = 500) String address,
+            @Size(max = 150) String area,
+            Boolean active,
+            Long version) {
+    }
+
+    public record RepresentativeResponse(
+            Long id, String name, String phone, String email, String address, String area,
+            boolean active, boolean builtIn, long customerCount, long version, Instant createdAt, Instant updatedAt) {
+    }
+
+    /** Representative shown on customers and invoices. */
+    public record RepresentativeRef(Long id, String name, String area, String phone) {
+    }
+
+    public record MoveCustomersRequest(@NotNull(message = "Choose the representative to move customers to")
+                                       Long targetRepresentativeId) {
+    }
+
+    public record MoveCustomersResponse(int moved, RepresentativeRef from, RepresentativeRef to) {
+    }
+
     // --- Customers ---
 
+    /** {@code representativeId} is required for every customer except the walk-in customer. */
     public record CustomerRequest(
             @NotBlank(message = "Name is required") @Size(max = 150) String name,
             @Pattern(regexp = PHONE_REGEX, message = PHONE_MESSAGE) String phone,
             @Email(message = "Email address is not valid") @Size(max = 150) String email,
             @Size(max = 500) String address,
+            Long representativeId,
             Boolean active,
             Long version) {
     }
 
     public record CustomerResponse(
             Long id, String name, String phone, String email, String address,
-            boolean active, boolean walkIn, long version, Instant createdAt, Instant updatedAt) {
+            RepresentativeRef representative, boolean active, boolean walkIn, long version, Instant createdAt, Instant updatedAt) {
     }
 
     // --- Categories ---

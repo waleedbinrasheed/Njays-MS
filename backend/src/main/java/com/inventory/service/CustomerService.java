@@ -7,7 +7,9 @@ import com.inventory.entity.Customer;
 import com.inventory.exception.BusinessException;
 import com.inventory.exception.ResourceNotFoundException;
 import com.inventory.mapper.MasterDataMapper;
+import com.inventory.entity.Representative;
 import com.inventory.repository.CustomerRepository;
+import com.inventory.repository.RepresentativeRepository;
 import com.inventory.repository.SaleRepository;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -24,15 +26,19 @@ public class CustomerService {
 
     private final CustomerRepository customers;
     private final SaleRepository sales;
+    private final RepresentativeRepository representatives;
 
-    public CustomerService(CustomerRepository customers, SaleRepository sales) {
+    public CustomerService(CustomerRepository customers, SaleRepository sales, RepresentativeRepository representatives) {
         this.customers = customers;
         this.sales = sales;
+        this.representatives = representatives;
     }
 
     @Transactional(readOnly = true)
-    public PageResponse<CustomerResponse> search(String search, Boolean active, Pageable pageable) {
-        return PageResponse.of(customers.search(searchTerm(search), active, pageable), MasterDataMapper::toResponse);
+    public PageResponse<CustomerResponse> search(String search, Boolean active, Long representativeId, boolean unassigned,
+                                                 Pageable pageable) {
+        return PageResponse.of(customers.search(searchTerm(search), active, representativeId, unassigned, pageable),
+                MasterDataMapper::toResponse);
     }
 
     @Transactional(readOnly = true)
@@ -51,6 +57,7 @@ public class CustomerService {
     @Transactional
     public CustomerResponse create(CustomerRequest request) {
         Customer customer = new Customer();
+        customer.setRepresentative(resolveRepresentative(request.representativeId(), null));
         apply(customer, request);
         return MasterDataMapper.toResponse(customers.save(customer));
     }
@@ -61,6 +68,9 @@ public class CustomerService {
         checkVersion(customer, request.version());
         if (customer.isWalkIn() && Boolean.FALSE.equals(request.active())) {
             throw new BusinessException("The walk-in customer cannot be deactivated");
+        }
+        if (!customer.isWalkIn()) {
+            customer.setRepresentative(resolveRepresentative(request.representativeId(), customer.getRepresentative()));
         }
         apply(customer, request);
         return MasterDataMapper.toResponse(customers.saveAndFlush(customer));
@@ -87,7 +97,24 @@ public class CustomerService {
         c.setActive(r.active() == null || r.active());
     }
 
+    /**
+     * Every customer needs a representative. A newly chosen one must be active; keeping the current
+     * (since deactivated) one is allowed so other details can still be edited.
+     */
+    private Representative resolveRepresentative(Long id, Representative current) {
+        if (id == null) {
+            throw new BusinessException("Choose the customer's representative");
+        }
+        if (current != null && current.getId().equals(id)) return current;
+        Representative r = representatives.findById(id)
+                .orElseThrow(() -> new BusinessException("Selected representative does not exist"));
+        if (!r.isActive()) {
+            throw new BusinessException("Representative '" + r.getName() + "' is inactive");
+        }
+        return r;
+    }
+
     private Customer load(Long id) {
-        return customers.findById(id).orElseThrow(() -> new ResourceNotFoundException("Customer", id));
+        return customers.findWithRepresentativeById(id).orElseThrow(() -> new ResourceNotFoundException("Customer", id));
     }
 }

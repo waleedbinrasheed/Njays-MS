@@ -106,12 +106,28 @@ export function SaleDetailPage({ id }: { id: number }) {
         number={s.invoiceNumber}
         cancelled={cancelled}
         party={
-          <>
-            <p className="text-xs uppercase tracking-wide text-slate-500">Bill to</p>
-            <p className="font-medium text-slate-900">{s.customer.name}</p>
-            {s.customerPhone && <p className="text-slate-600">{s.customerPhone}</p>}
-            {s.customerAddress && <p className="whitespace-pre-line text-slate-600">{s.customerAddress}</p>}
-          </>
+          s.representative ? (
+            <>
+              <p className="text-xs uppercase tracking-wide text-slate-500">Bill to (representative)</p>
+              <p className="font-medium text-slate-900">{s.representative.name}</p>
+              {(s.representative.area || s.representative.phone) && (
+                <p className="text-slate-600">{[s.representative.area, s.representative.phone].filter(Boolean).join(" · ")}</p>
+              )}
+              {s.customer && (
+                <p className="mt-2 text-slate-600">
+                  For customer: <span className="font-medium text-slate-900">{s.customer.name}</span>
+                  {s.customerPhone ? ` · ${s.customerPhone}` : ""}
+                </p>
+              )}
+            </>
+          ) : (
+            <>
+              <p className="text-xs uppercase tracking-wide text-slate-500">Bill to</p>
+              <p className="font-medium text-slate-900">{s.customer?.name ?? "-"}</p>
+              {s.customerPhone && <p className="text-slate-600">{s.customerPhone}</p>}
+              {s.customerAddress && <p className="whitespace-pre-line text-slate-600">{s.customerAddress}</p>}
+            </>
+          )
         }
         meta={[
           { label: "Date", value: formatDate(s.saleDate) },

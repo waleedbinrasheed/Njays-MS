@@ -12,6 +12,7 @@ import com.inventory.entity.Customer;
 import com.inventory.entity.DocumentStatus;
 import com.inventory.entity.PaymentStatus;
 import com.inventory.entity.Product;
+import com.inventory.entity.Representative;
 import com.inventory.entity.ReferenceType;
 import com.inventory.entity.Sale;
 import com.inventory.entity.SaleItem;
@@ -23,6 +24,7 @@ import com.inventory.repository.AppUserRepository;
 import com.inventory.repository.SaleReturnRepository;
 import com.inventory.repository.CustomerRepository;
 import com.inventory.repository.ProductRepository;
+import com.inventory.repository.RepresentativeRepository;
 import com.inventory.repository.SaleRepository;
 import com.inventory.repository.SaleRepository.Filters;
 import com.inventory.security.CurrentUser;
@@ -72,13 +74,14 @@ public class SaleService {
     private final DocumentNumberService numbers;
     private final UserDirectory userDirectory;
     private final SaleReturnRepository saleReturns;
+    private final RepresentativeRepository representatives;
     private final Clock clock;
     private final ZoneId zone;
 
     public SaleService(SaleRepository sales, CustomerRepository customers, ProductRepository products,
                        AppUserRepository users, InventoryService inventoryService, DocumentNumberService numbers,
                        UserDirectory userDirectory, SaleReturnRepository saleReturns,
-                       Clock clock, ZoneId businessZone) {
+                       RepresentativeRepository representatives, Clock clock, ZoneId businessZone) {
         this.sales = sales;
         this.customers = customers;
         this.products = products;
@@ -87,12 +90,13 @@ public class SaleService {
         this.numbers = numbers;
         this.userDirectory = userDirectory;
         this.saleReturns = saleReturns;
+        this.representatives = representatives;
         this.clock = clock;
         this.zone = businessZone;
     }
 
-    public record SaleFilter(String search, Long customerId, Long productId, LocalDate from, LocalDate to,
-                             PaymentStatus paymentStatus, DocumentStatus status, Long createdBy) {
+    public record SaleFilter(String search, Long representativeId, Long customerId, Long productId, LocalDate from,
+                             LocalDate to, PaymentStatus paymentStatus, DocumentStatus status, Long createdBy) {
     }
 
     @Transactional
@@ -100,11 +104,12 @@ public class SaleService {
         if (request.saleDate().isAfter(LocalDate.now(clock.withZone(zone)))) {
             throw new BusinessException("Sale date cannot be in the future");
         }
-        Customer customer = resolveCustomer(request.customerId());
+        Representative representative = resolveRepresentative(request.representativeId());
+        Customer customer = resolveCustomer(request.customerId(), representative);
         Map<Long, Product> productsById = loadProducts(request.items());
 
-        Sale sale = new Sale(numbers.next(DocumentType.SALE), customer, request.saleDate(), request.paymentStatus(),
-                trimToNull(request.notes()));
+        Sale sale = new Sale(numbers.next(DocumentType.SALE), representative, customer, request.saleDate(),
+                request.paymentStatus(), trimToNull(request.notes()));
 
         List<LineAmounts> amounts = new ArrayList<>();
         for (SaleLineRequest line : request.items()) {
@@ -176,7 +181,8 @@ public class SaleService {
             throw new BusinessException("'To' date must not be before 'from' date");
         }
         Specification<Sale> spec = Specification.allOf(
-                Filters.matches(f.search()), Filters.customer(f.customerId()), Filters.product(f.productId()),
+                Filters.matches(f.search()), Filters.representative(f.representativeId()),
+                Filters.customer(f.customerId()), Filters.product(f.productId()),
                 Filters.dateFrom(f.from()), Filters.dateTo(f.to()), Filters.paymentStatus(f.paymentStatus()),
                 Filters.status(f.status()), Filters.createdBy(f.createdBy()));
         Page<Sale> page = sales.findAll(spec, pageable);
@@ -189,12 +195,27 @@ public class SaleService {
         return SaleMapper.toDetail(s, userDirectory.ref(s.getCreatedBy()));
     }
 
-    private Customer resolveCustomer(Long customerId) {
-        Customer customer = customerId == null
-                ? customers.findByWalkInTrue().orElseThrow(() -> new IllegalStateException("Walk-in customer missing"))
-                : customers.findById(customerId).orElseThrow(() -> new BusinessException("Selected customer does not exist"));
+    /** The buyer: an existing, active representative. */
+    private Representative resolveRepresentative(Long representativeId) {
+        Representative representative = representatives.findById(representativeId)
+                .orElseThrow(() -> new BusinessException("Selected representative does not exist"));
+        if (!representative.isActive()) {
+            throw new BusinessException("Representative '" + representative.getName() + "' is inactive");
+        }
+        return representative;
+    }
+
+    /** Optional: if given, it must be an active customer of that representative. */
+    private Customer resolveCustomer(Long customerId, Representative representative) {
+        if (customerId == null) return null;
+        Customer customer = customers.findWithRepresentativeById(customerId)
+                .orElseThrow(() -> new BusinessException("Selected customer does not exist"));
         if (!customer.isActive()) {
             throw new BusinessException("Customer '" + customer.getName() + "' is inactive");
+        }
+        if (customer.getRepresentative() == null || !customer.getRepresentative().getId().equals(representative.getId())) {
+            throw new BusinessException("Customer '" + customer.getName() + "' is not one of "
+                    + representative.getName() + "'s customers");
         }
         return customer;
     }

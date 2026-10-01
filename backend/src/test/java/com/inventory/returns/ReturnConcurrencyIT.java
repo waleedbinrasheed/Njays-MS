@@ -97,7 +97,7 @@ class ReturnConcurrencyIT {
             return id;
         });
         LocalDate today = LocalDate.now(businessZone);
-        SaleDetail sale = saleService.create(new CreateSaleRequest(null, today, PaymentStatus.PAID, null, null,
+        SaleDetail sale = saleService.create(new CreateSaleRequest(counterRep(), null, today, PaymentStatus.PAID, null, null,
                 List.of(new SaleLineRequest(productId, 5, new BigDecimal("10.00"), null, null))));
         long itemId = sale.items().getFirst().id();
 
@@ -132,6 +132,13 @@ class ReturnConcurrencyIT {
         assertThat(returned).isEqualTo(4);
         Integer stock = jdbc.queryForObject("select quantity from inventory where product_id = ?", Integer.class, productId);
         assertThat(stock).isEqualTo(10 - 5 + 4);
+    }
+
+    @Autowired
+    private com.inventory.repository.RepresentativeRepository representativeRepository;
+
+    private long counterRep() {
+        return representativeRepository.findByBuiltInTrue().orElseThrow().getId();
     }
 
     private void signIn() {

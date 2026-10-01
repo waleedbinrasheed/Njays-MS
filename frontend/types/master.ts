@@ -30,11 +30,41 @@ export interface PartyInput {
   version?: number;
 }
 
+/** Representative as shown on customers and invoices. */
+export interface RepresentativeRef {
+  id: number;
+  name: string;
+  area: string | null;
+  phone: string | null;
+}
+
+export interface Representative extends Audited {
+  name: string;
+  phone: string | null;
+  email: string | null;
+  address: string | null;
+  area: string | null;
+  builtIn: boolean;
+  customerCount: number;
+}
+
+export interface RepresentativeInput {
+  name: string;
+  phone: string;
+  email: string;
+  address: string;
+  area: string;
+  active: boolean;
+  version?: number;
+}
+
 export interface Customer extends Audited {
   name: string;
   phone: string | null;
   email: string | null;
   address: string | null;
+  /** Null for the walk-in customer and customers from before representatives existed. */
+  representative: RepresentativeRef | null;
   walkIn: boolean;
 }
 
@@ -43,6 +73,7 @@ export interface CustomerInput {
   phone: string;
   email: string;
   address: string;
+  representativeId: number | null;
   active: boolean;
   version?: number;
 }

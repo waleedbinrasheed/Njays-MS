@@ -11,7 +11,7 @@ import { Spinner } from "@/components/ui/Spinner";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { DocumentStatusBadge, PaymentStatusBadge } from "@/features/documents/StatusBadges";
 import { loadStockedProductOptions } from "@/features/inventory/lookups";
-import { loadCustomerOptions } from "@/features/master/lookups";
+import { loadAnyRepresentativeOptions, loadCustomerOptions } from "@/features/master/lookups";
 import { useApiQuery } from "@/hooks/useApiQuery";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { saleService } from "@/services/saleService";
@@ -24,6 +24,7 @@ const PAGE_SIZE = 25;
 export function SalesHistoryPage() {
   const { hasPermission } = useAuth();
   const [search, setSearch] = useState("");
+  const [representative, setRepresentative] = useState<Option | null>(null);
   const [customer, setCustomer] = useState<Option | null>(null);
   const [product, setProduct] = useState<Option | null>(null);
   const [from, setFrom] = useState("");
@@ -42,6 +43,7 @@ export function SalesHistoryPage() {
         : saleService.list(
             {
               search: debouncedSearch,
+              representativeId: representative?.id,
               customerId: customer?.id,
               productId: product?.id,
               from: from || undefined,
@@ -54,7 +56,7 @@ export function SalesHistoryPage() {
             },
             signal,
           ),
-    [debouncedSearch, customer?.id ?? null, product?.id ?? null, from, to, payment, status, page, sort, dateError ?? null],
+    [debouncedSearch, representative?.id ?? null, customer?.id ?? null, product?.id ?? null, from, to, payment, status, page, sort, dateError ?? null],
   );
 
   const reset = <T,>(setter: (v: T) => void) => (v: T) => {
@@ -86,8 +88,9 @@ export function SalesHistoryPage() {
           <label className="block text-sm font-medium text-slate-700" htmlFor="sale-search">
             Search
           </label>
-          <SearchInput id="sale-search" placeholder="Invoice no., customer or phone" value={search} onChange={(e) => reset(setSearch)(e.target.value)} />
+          <SearchInput id="sale-search" placeholder="Invoice no., representative or customer" value={search} onChange={(e) => reset(setSearch)(e.target.value)} />
         </div>
+        <AsyncSelect label="Representative" value={representative} onChange={reset(setRepresentative)} load={loadAnyRepresentativeOptions} placeholder="All representatives" />
         <AsyncSelect label="Customer" value={customer} onChange={reset(setCustomer)} load={loadCustomerOptions} placeholder="All customers" />
         <AsyncSelect label="Product" value={product} onChange={reset(setProduct)} load={loadStockedProductOptions} placeholder="All products" />
         <div className="grid grid-cols-2 gap-2">
@@ -122,6 +125,7 @@ export function SalesHistoryPage() {
               <tr>
                 <SortableHeader label="Invoice" field="invoiceNumber" sort={sort} onSort={onSort} />
                 <SortableHeader label="Date" field="saleDate" sort={sort} onSort={onSort} />
+                <SortableHeader label="Representative" field="representative" sort={sort} onSort={onSort} />
                 <SortableHeader label="Customer" field="customer" sort={sort} onSort={onSort} />
                 <SortableHeader label="Total" field="total" sort={sort} onSort={onSort} />
                 <th scope="col" className="px-4 py-2.5 font-medium">Payment</th>
@@ -138,7 +142,17 @@ export function SalesHistoryPage() {
                     <DocumentStatusBadge status={s.status} />
                   </td>
                   <td className="whitespace-nowrap px-4 py-2.5">{formatDate(s.saleDate)}</td>
-                  <td className="px-4 py-2.5">{s.customer.name}</td>
+                  <td className="px-4 py-2.5">
+                    {s.representative ? (
+                      <>
+                        <div>{s.representative.name}</div>
+                        {s.representative.area && <div className="text-xs text-slate-500">{s.representative.area}</div>}
+                      </>
+                    ) : (
+                      <span className="text-slate-400">Unassigned</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-2.5">{s.customer?.name ?? "-"}</td>
                   <td className={`whitespace-nowrap px-4 py-2.5 text-right tabular-nums ${s.status === "CANCELLED" ? "line-through" : ""}`}>
                     {formatCurrency(s.total)}
                   </td>

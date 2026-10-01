@@ -84,7 +84,8 @@ class ReportIT extends ApiTestBase {
 
     @Test
     void salesReportFiltersAndCountsOnlyCompletedInvoices() throws Exception {
-        long customer = create("/api/customers", Map.of("name", TestUsers.uniqueName("RptCust")));
+        long customer = create("/api/customers", Map.of("name", TestUsers.uniqueName("RptCust"),
+                "representativeId", counterRepresentativeId()));
         long p = product("Sold in report", null, "10");
         adjust(p, 10);
         JsonNode s1 = sale(customer, p, 2, "100", "PAID");
@@ -243,6 +244,7 @@ class ReportIT extends ApiTestBase {
         Map<String, Object> body = new java.util.HashMap<>(Map.of("saleDate", today.toString(), "paymentStatus", payment,
                 "items", List.of(Map.of("productId", productId, "quantity", qty, "unitPrice", price))));
         if (customerId != null) body.put("customerId", customerId);
+        body.put("representativeId", representativeFor(customerId));
         return read(mvc.perform(withJson(post("/api/sales"), body).session(admin)).andExpect(status().isCreated()).andReturn());
     }
 

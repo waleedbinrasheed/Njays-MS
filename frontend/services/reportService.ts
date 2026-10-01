@@ -11,6 +11,8 @@ import type {
   MovementRow,
   MovementSummary,
   ReportPage,
+  RepresentativeRow,
+  RepresentativeSummary,
 } from "@/types/report";
 
 type Query = PageQuery & Record<string, string | number | boolean | undefined>;
@@ -24,6 +26,8 @@ export const reportService = {
   sales: (q: Query, signal?: AbortSignal) => api.get<ReportPage<DocumentRow, DocumentSummary>>("/reports/sales", q, signal),
   purchases: (q: Query, signal?: AbortSignal) =>
     api.get<ReportPage<DocumentRow, DocumentSummary>>("/reports/purchases", q, signal),
+  representatives: (q: Query, signal?: AbortSignal) =>
+    api.get<ReportPage<RepresentativeRow, RepresentativeSummary>>("/reports/representatives", q, signal),
   stockMovement: (q: Query, signal?: AbortSignal) =>
     api.get<ReportPage<MovementRow, MovementSummary>>("/reports/stock-movement", q, signal),
 };

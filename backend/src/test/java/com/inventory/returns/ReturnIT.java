@@ -58,7 +58,7 @@ class ReturnIT extends ApiTestBase {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.returnNumber", matchesPattern("SRT-\\d{4}-\\d{6}")))
                 .andExpect(jsonPath("$.documentNumber").value(sale.get("invoiceNumber").asText()))
-                .andExpect(jsonPath("$.party.name").value("Walk-in Customer"))
+                .andExpect(jsonPath("$.party.name").value("Counter Sales"))
                 .andExpect(jsonPath("$.total").value(200.00));
         assertThat(stock(product)).isEqualTo(7);
 
@@ -204,7 +204,8 @@ class ReturnIT extends ApiTestBase {
     }
 
     private JsonNode sell(long productId, int qty, String price) throws Exception {
-        return read(mvc.perform(withJson(post("/api/sales"), Map.of("saleDate", today.toString(), "paymentStatus", "PAID",
+        return read(mvc.perform(withJson(post("/api/sales"), Map.of("representativeId", counterRepresentativeId(),
+                        "saleDate", today.toString(), "paymentStatus", "PAID",
                         "items", List.of(Map.of("productId", productId, "quantity", qty, "unitPrice", price)))).session(admin))
                 .andExpect(status().isCreated()).andReturn());
     }

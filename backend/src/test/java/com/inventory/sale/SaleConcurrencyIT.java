@@ -140,7 +140,7 @@ class SaleConcurrencyIT {
     void multiLineSaleWithOneShortLineChangesNothing() {
         long plenty = productWithStock(10);
         long scarce = productWithStock(2);
-        CreateSaleRequest both = new CreateSaleRequest(null, LocalDate.now(businessZone), PaymentStatus.PAID, null, null,
+        CreateSaleRequest both = new CreateSaleRequest(counterRep(), null, LocalDate.now(businessZone), PaymentStatus.PAID, null, null,
                 List.of(new SaleLineRequest(plenty, 1, new BigDecimal("100.00"), null, null),
                         new SaleLineRequest(scarce, 3, new BigDecimal("100.00"), null, null)));
 
@@ -159,7 +159,7 @@ class SaleConcurrencyIT {
     }
 
     private CreateSaleRequest request(long productId, int qty) {
-        return new CreateSaleRequest(null, LocalDate.now(businessZone), PaymentStatus.PAID, null, null,
+        return new CreateSaleRequest(counterRep(), null, LocalDate.now(businessZone), PaymentStatus.PAID, null, null,
                 List.of(new SaleLineRequest(productId, qty, new BigDecimal("100.00"), null, null)));
     }
 
@@ -170,6 +170,13 @@ class SaleConcurrencyIT {
             inventoryService.apply(new Movement(id, TransactionType.ADJUSTMENT, qty, null, null, "opening"));
             return id;
         });
+    }
+
+    @Autowired
+    private com.inventory.repository.RepresentativeRepository representativeRepository;
+
+    private long counterRep() {
+        return representativeRepository.findByBuiltInTrue().orElseThrow().getId();
     }
 
     private void signIn() {

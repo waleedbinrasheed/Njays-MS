@@ -19,7 +19,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * A sales invoice. Lines and amounts are fixed once saved; only the payment status can change
+ * A sales invoice. The buyer is the {@link #representative}; {@link #customer} optionally records
+ * which of the representative's customers it is for. (Invoices from before representatives existed
+ * have only a customer.) Lines and amounts are fixed once saved; only the payment status can change
  * afterwards, and cancelling returns the sold stock.
  */
 @Entity
@@ -29,8 +31,12 @@ public class Sale extends AuditableEntity {
     @Column(name = "invoice_number", nullable = false, updatable = false, length = 20)
     private String invoiceNumber;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "customer_id", nullable = false, updatable = false)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "representative_id", updatable = false)
+    private Representative representative;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "customer_id", updatable = false)
     private Customer customer;
 
     @Column(name = "sale_date", nullable = false, updatable = false)
@@ -79,8 +85,10 @@ public class Sale extends AuditableEntity {
     protected Sale() {
     }
 
-    public Sale(String invoiceNumber, Customer customer, LocalDate saleDate, PaymentStatus paymentStatus, String notes) {
+    public Sale(String invoiceNumber, Representative representative, Customer customer, LocalDate saleDate,
+                PaymentStatus paymentStatus, String notes) {
         this.invoiceNumber = invoiceNumber;
+        this.representative = representative;
         this.customer = customer;
         this.saleDate = saleDate;
         this.paymentStatus = paymentStatus;
@@ -120,6 +128,11 @@ public class Sale extends AuditableEntity {
         return invoiceNumber;
     }
 
+    public Representative getRepresentative() {
+        return representative;
+    }
+
+    /** May be null for new sales (the customer is optional). */
     public Customer getCustomer() {
         return customer;
     }

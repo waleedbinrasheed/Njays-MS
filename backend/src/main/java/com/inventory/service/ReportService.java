@@ -9,6 +9,9 @@ import com.inventory.dto.report.ReportDtos.LowStockSummary;
 import com.inventory.dto.report.ReportDtos.MovementRow;
 import com.inventory.dto.report.ReportDtos.MovementSummary;
 import com.inventory.dto.report.ReportDtos.ReportPage;
+import com.inventory.dto.report.ReportDtos.RepresentativeRow;
+import com.inventory.dto.report.ReportDtos.RepresentativeSummary;
+import com.inventory.repository.ReportRepository.RepresentativeFilter;
 import com.inventory.entity.DocumentStatus;
 import com.inventory.entity.PaymentStatus;
 import com.inventory.entity.TransactionType;
@@ -56,8 +59,11 @@ public class ReportService {
                                   Boolean active) {
     }
 
-    public record DocumentFilter(LocalDate from, LocalDate to, Long partyId, Long productId, PaymentStatus paymentStatus,
-                                 DocumentStatus status) {
+    /**
+     * {@code partyId}: customer for sales, supplier for purchases. {@code representativeId}: sales only.
+     */
+    public record DocumentFilter(LocalDate from, LocalDate to, Long partyId, Long representativeId, Long productId,
+                                 PaymentStatus paymentStatus, DocumentStatus status) {
     }
 
     public record MovementFilter(Long productId, TransactionType type, LocalDate from, LocalDate to) {
@@ -89,16 +95,32 @@ public class ReportService {
         Where w = new Where()
                 .add(f.from() != null, kind.dateColumn() + " >= :from", "from", f.from())
                 .add(f.to() != null, kind.dateColumn() + " <= :to", "to", f.to())
-                .add(f.partyId() != null, kind.partyFkColumn() + " = :partyId", "partyId", f.partyId())
+                .add(f.partyId() != null, (kind == DocumentKind.SALE ? "d.customer_id" : "d.supplier_id") + " = :partyId",
+                        "partyId", f.partyId())
+                .add(f.representativeId() != null && kind == DocumentKind.SALE, "d.representative_id = :repId", "repId",
+                        f.representativeId())
                 .add(f.productId() != null, kind.productExists(), "productId", f.productId())
                 .add(f.paymentStatus() != null, "d.payment_status = :paymentStatus", "paymentStatus",
                         f.paymentStatus() == null ? null : f.paymentStatus().name())
                 .add(f.status() != null, "d.status = :status", "status", f.status() == null ? null : f.status().name());
         Map<String, String> sort = Map.of("date", kind.dateColumn(), "number", kind.numberColumn(), "total", "d.total",
-                "party", "party.name");
+                "party", "party.name", "customer", kind == DocumentKind.SALE ? "cust.name" : "party.name");
         Paging paging = paging(pageable, sort, kind.dateColumn() + " DESC", "d.id");
         long total = reports.count(ReportRepository.documentFromClause(kind), w);
         return page(reports.documentRows(kind, w, paging), total, pageable, reports.documentSummary(kind, w));
+    }
+
+    private static final Map<String, String> REPRESENTATIVE_SORT = Map.of(
+            "name", "name", "area", "area", "customers", "customers", "invoices", "invoices",
+            "salesTotal", "sales_total", "returns", "returns", "netSales", "net_sales", "owed", "owed",
+            "lastSale", "last_sale");
+
+    @Transactional(readOnly = true)
+    public ReportPage<RepresentativeRow, RepresentativeSummary> representatives(RepresentativeFilter f, Pageable pageable) {
+        checkRange(f.from(), f.to());
+        Paging paging = paging(pageable, REPRESENTATIVE_SORT, "net_sales DESC, name ASC", "id");
+        RepresentativeSummary summary = reports.representativeSummary(f);
+        return page(reports.representativeRows(f, paging), summary.rows(), pageable, summary);
     }
 
     @Transactional(readOnly = true)

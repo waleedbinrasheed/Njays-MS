@@ -1,5 +1,5 @@
 import type { ProductRef } from "@/types/inventory";
-import type { Ref } from "@/types/master";
+import type { Ref, RepresentativeRef } from "@/types/master";
 import type { DocumentStatus, PaymentStatus } from "@/types/purchase";
 
 export interface SaleLineInput {
@@ -11,7 +11,9 @@ export interface SaleLineInput {
 }
 
 export interface CreateSaleInput {
-  /** Omit for the walk-in customer. */
+  /** The buyer. Use the built-in "Counter Sales" representative for counter sales. */
+  representativeId: number;
+  /** Optional: one of that representative's customers. */
   customerId: number | null;
   saleDate: string;
   paymentStatus: PaymentStatus;
@@ -37,7 +39,10 @@ export interface SaleSummary {
   id: number;
   invoiceNumber: string;
   saleDate: string;
-  customer: Ref;
+  /** Null on invoices from before representatives existed ("Unassigned"). */
+  representative: RepresentativeRef | null;
+  /** Optional on new invoices. */
+  customer: Ref | null;
   total: number;
   paymentStatus: PaymentStatus;
   status: DocumentStatus;

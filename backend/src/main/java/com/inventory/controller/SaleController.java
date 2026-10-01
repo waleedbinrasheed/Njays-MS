@@ -41,6 +41,7 @@ public class SaleController {
             "invoiceNumber", "invoiceNumber",
             "total", "total",
             "customer", "customer.name",
+            "representative", "representative.name",
             "createdAt", "createdAt",
             "id", "id"));
 
@@ -54,6 +55,7 @@ public class SaleController {
     @PreAuthorize("hasAuthority('SALE_VIEW')")
     public PageResponse<SaleSummary> list(
             @RequestParam(required = false) String search,
+            @RequestParam(required = false) Long representativeId,
             @RequestParam(required = false) Long customerId,
             @RequestParam(required = false) Long productId,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
@@ -63,7 +65,7 @@ public class SaleController {
             @RequestParam(required = false) Long createdBy,
             @SortDefault.SortDefaults({@SortDefault(sort = "saleDate", direction = Sort.Direction.DESC),
                     @SortDefault(sort = "id", direction = Sort.Direction.DESC)}) @PageableDefault Pageable pageable) {
-        return service.search(new SaleFilter(search, customerId, productId, from, to, paymentStatus, status, createdBy),
+        return service.search(new SaleFilter(search, representativeId, customerId, productId, from, to, paymentStatus, status, createdBy),
                 SORTABLE.check(pageable));
     }
 

@@ -5,6 +5,7 @@ import type { CreateSaleInput, SaleDetail, SaleSummary } from "@/types/sale";
 
 export interface SaleQuery extends PageQuery {
   search?: string;
+  representativeId?: number;
   customerId?: number;
   productId?: number;
   from?: string;

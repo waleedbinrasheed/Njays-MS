@@ -5,6 +5,7 @@ import com.inventory.entity.PaymentStatus;
 import com.inventory.entity.Sale;
 import com.inventory.entity.SaleItem;
 import jakarta.persistence.LockModeType;
+import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Subquery;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -23,10 +24,10 @@ import java.util.Optional;
 public interface SaleRepository extends JpaRepository<Sale, Long>, JpaSpecificationExecutor<Sale> {
 
     @Override
-    @EntityGraph(attributePaths = "customer")
+    @EntityGraph(attributePaths = {"representative", "customer"})
     Page<Sale> findAll(Specification<Sale> spec, Pageable pageable);
 
-    @EntityGraph(attributePaths = {"customer", "items", "items.product", "cancelledBy"})
+    @EntityGraph(attributePaths = {"representative", "customer", "items", "items.product", "cancelledBy"})
     @Query("select s from Sale s where s.id = :id")
     Optional<Sale> findDetailedById(@Param("id") Long id);
 
@@ -37,19 +38,35 @@ public interface SaleRepository extends JpaRepository<Sale, Long>, JpaSpecificat
 
     boolean existsByCustomerId(Long customerId);
 
+    boolean existsByRepresentativeId(Long representativeId);
+
     final class Filters {
 
         private Filters() {
         }
 
-        /** Invoice number or customer name / phone. */
+        /**
+         * Invoice number, representative name/area, or customer name/phone. Outer joins: a sale may have
+         * no customer (new sales) or no representative (sales from before representatives existed).
+         */
         public static Specification<Sale> matches(String search) {
             if (search == null || search.isBlank()) return null;
             String term = "%" + search.trim().toLowerCase(Locale.ROOT) + "%";
-            return (root, q, cb) -> cb.or(
-                    cb.like(cb.lower(root.get("invoiceNumber")), term),
-                    cb.like(cb.lower(root.get("customer").get("name")), term),
-                    cb.like(cb.lower(cb.coalesce(root.get("customer").get("phone"), "")), term));
+            return (root, q, cb) -> {
+                var rep = root.join("representative", JoinType.LEFT);
+                var customer = root.join("customer", JoinType.LEFT);
+                return cb.or(
+                        cb.like(cb.lower(root.get("invoiceNumber")), term),
+                        cb.like(cb.lower(cb.coalesce(rep.get("name"), "")), term),
+                        cb.like(cb.lower(cb.coalesce(rep.get("area"), "")), term),
+                        cb.like(cb.lower(cb.coalesce(customer.get("name"), "")), term),
+                        cb.like(cb.lower(cb.coalesce(customer.get("phone"), "")), term));
+            };
+        }
+
+        public static Specification<Sale> representative(Long representativeId) {
+            return representativeId == null ? null
+                    : (root, q, cb) -> cb.equal(root.get("representative").get("id"), representativeId);
         }
 
         public static Specification<Sale> customer(Long customerId) {

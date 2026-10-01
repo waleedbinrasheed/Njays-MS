@@ -5,10 +5,13 @@ import com.inventory.dto.master.MasterDataDtos.CustomerResponse;
 import com.inventory.dto.master.MasterDataDtos.PartyResponse;
 import com.inventory.dto.master.MasterDataDtos.ProductResponse;
 import com.inventory.dto.master.MasterDataDtos.Ref;
+import com.inventory.dto.master.MasterDataDtos.RepresentativeRef;
+import com.inventory.dto.master.MasterDataDtos.RepresentativeResponse;
 import com.inventory.entity.Category;
 import com.inventory.entity.Customer;
 import com.inventory.entity.Product;
 import com.inventory.entity.Publisher;
+import com.inventory.entity.Representative;
 import com.inventory.entity.Supplier;
 
 public final class MasterDataMapper {
@@ -28,7 +31,16 @@ public final class MasterDataMapper {
 
     public static CustomerResponse toResponse(Customer c) {
         return new CustomerResponse(c.getId(), c.getName(), c.getPhone(), c.getEmail(), c.getAddress(),
-                c.isActive(), c.isWalkIn(), c.getVersion(), c.getCreatedAt(), c.getUpdatedAt());
+                ref(c.getRepresentative()), c.isActive(), c.isWalkIn(), c.getVersion(), c.getCreatedAt(), c.getUpdatedAt());
+    }
+
+    public static RepresentativeResponse toResponse(Representative r, long customerCount) {
+        return new RepresentativeResponse(r.getId(), r.getName(), r.getPhone(), r.getEmail(), r.getAddress(), r.getArea(),
+                r.isActive(), r.isBuiltIn(), customerCount, r.getVersion(), r.getCreatedAt(), r.getUpdatedAt());
+    }
+
+    public static RepresentativeRef ref(Representative r) {
+        return r == null ? null : new RepresentativeRef(r.getId(), r.getName(), r.getArea(), r.getPhone());
     }
 
     public static CategoryResponse toResponse(Category c) {

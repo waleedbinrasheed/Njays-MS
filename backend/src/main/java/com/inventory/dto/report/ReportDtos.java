@@ -39,12 +39,28 @@ public final class ReportDtos {
 
     // --- Sales / purchases ---
 
-    public record DocumentRow(Long id, String number, LocalDate date, Long partyId, String party, int items,
+    /**
+     * {@code party} is the buyer: the representative for sales (null on pre-representative invoices)
+     * or the supplier for purchases. {@code customer} is the sale's optional customer.
+     */
+    public record DocumentRow(Long id, String number, LocalDate date, Long partyId, String party, String customer, int items,
                               BigDecimal total, PaymentStatus paymentStatus, DocumentStatus status, String createdBy) {
     }
 
     /** Totals of COMPLETED documents in the result (cancelled ones are listed but not counted). */
     public record DocumentSummary(long documents, BigDecimal total, BigDecimal paid, BigDecimal unpaid, BigDecimal partial) {
+    }
+
+    // --- Representatives ---
+
+    /** {@code id} is null for the "Unassigned" row. owed = unpaid + partially paid invoice totals. */
+    public record RepresentativeRow(Long id, String name, String area, boolean active, long customers, long invoices,
+                                    BigDecimal salesTotal, BigDecimal returns, BigDecimal netSales, BigDecimal paid,
+                                    BigDecimal owed, LocalDate lastSale) {
+    }
+
+    public record RepresentativeSummary(long rows, long representatives, long invoices, BigDecimal salesTotal,
+                                        BigDecimal returns, BigDecimal netSales, BigDecimal owed) {
     }
 
     // --- Stock movement ---

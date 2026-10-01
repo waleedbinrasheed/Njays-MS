@@ -50,14 +50,15 @@ class SaleIT extends ApiTestBase {
     }
 
     @Test
-    void saleReducesStockRecordsLedgerAndDefaultsToWalkInCustomer() throws Exception {
+    void saleReducesStockRecordsLedgerAndIsBilledToTheRepresentative() throws Exception {
         long a = stockedProduct("Sold A", 10);
         long b = stockedProduct("Sold B", 5);
 
         JsonNode sale = read(createSale(null, List.of(line(a, 3, "500", "10", "0"), line(b, 2, "200", null, "5")), "20")
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.invoiceNumber", matchesPattern("INV-\\d{4}-\\d{6}")))
-                .andExpect(jsonPath("$.customer.name").value("Walk-in Customer"))
+                .andExpect(jsonPath("$.representative.name").value("Counter Sales"))
+                .andExpect(jsonPath("$.customer").doesNotExist())
                 .andExpect(jsonPath("$.subtotal").value(1900.00))      // 1500 + 400
                 .andExpect(jsonPath("$.discountTotal").value(170.00))  // 150 line + 20 invoice
                 .andExpect(jsonPath("$.taxTotal").value(20.00))        // 5% of 400
@@ -88,7 +89,8 @@ class SaleIT extends ApiTestBase {
     @Test
     void chosenCustomerMustBeActive() throws Exception {
         long a = stockedProduct("For customers", 5);
-        long customerId = create("/api/customers", Map.of("name", TestUsers.uniqueName("Cust")));
+        long customerId = create("/api/customers", Map.of("name", TestUsers.uniqueName("Cust"),
+                "representativeId", counterRepresentativeId()));
 
         createSale(customerId, List.of(line(a, 1, "100", null, null)), null)
                 .andExpect(status().isCreated())
@@ -96,7 +98,8 @@ class SaleIT extends ApiTestBase {
 
         JsonNode c = read(mvc.perform(get("/api/customers/" + customerId).session(admin)).andReturn());
         mvc.perform(withJson(put("/api/customers/" + customerId), Map.of("name", c.get("name").asText(), "active", false,
-                "version", c.get("version").asLong())).session(admin)).andExpect(status().isOk());
+                "representativeId", counterRepresentativeId(), "version", c.get("version").asLong())).session(admin))
+                .andExpect(status().isOk());
         createSale(customerId, List.of(line(a, 1, "100", null, null)), null)
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message", containsString("is inactive")));
@@ -194,6 +197,7 @@ class SaleIT extends ApiTestBase {
 
     private Map<String, Object> sale(Long customerId, List<Map<String, Object>> lines, String invoiceDiscount) {
         Map<String, Object> body = new HashMap<>();
+        body.put("representativeId", representativeFor(customerId));
         body.put("customerId", customerId);
         body.put("saleDate", today.toString());
         body.put("paymentStatus", "UNPAID");

@@ -45,7 +45,7 @@ interface EntityListPageProps<T extends { id: number; active: boolean }> {
   canDelete?: (row: T) => boolean;
   /** Extra filter controls and the query parameters they produce. */
   filters?: ReactNode;
-  filterQuery?: Record<string, string | number | undefined>;
+  filterQuery?: Record<string, string | number | boolean | undefined>;
 }
 
 const PAGE_SIZE = 20;

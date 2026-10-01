@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { AsyncSelect, type Option } from "@/components/ui/AsyncSelect";
 import { Badge } from "@/components/ui/Feedback";
 import { SearchInput, SelectField, TextField } from "@/components/ui/FormField";
@@ -9,6 +10,7 @@ import { StatTile } from "@/components/ui/StatTile";
 import { DocumentStatusBadge, PaymentStatusBadge } from "@/features/documents/StatusBadges";
 import { loadStockedProductOptions } from "@/features/inventory/lookups";
 import {
+  loadAnyRepresentativeOptions,
   loadCategoryOptions,
   loadCustomerOptions,
   loadPublisherOptions,
@@ -18,7 +20,7 @@ import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { reportService } from "@/services/reportService";
 import type { StockStatusFilter, TransactionType } from "@/types/inventory";
 import type { DocumentStatus, PaymentStatus } from "@/types/purchase";
-import type { DocumentRow, InventoryRow, LowStockRow, MovementRow } from "@/types/report";
+import type { DocumentRow, InventoryRow, LowStockRow, MovementRow, RepresentativeRow } from "@/types/report";
 import { formatCurrency, formatDate, formatDateTime } from "@/utils/format";
 import { PAYMENT_STATUS_LABELS, TRANSACTION_TYPE_LABELS, formatSignedQuantity } from "@/utils/labels";
 import { ReportShell, type ReportColumn } from "./ReportShell";
@@ -207,8 +209,14 @@ export function LowStockReportPage() {
 
 function DocumentReport({ kind }: { kind: "sales" | "purchases" }) {
   const isSales = kind === "sales";
-  const [from, setFrom] = useState("");
-  const [to, setTo] = useState("");
+  const params = useSearchParams();
+  // Drill-down from the Representative report: ?representativeId=..&representativeName=..&from=..&to=..
+  const linkedRep = Number(params.get("representativeId")) || null;
+  const [from, setFrom] = useState(params.get("from") ?? "");
+  const [to, setTo] = useState(params.get("to") ?? "");
+  const [representative, setRepresentative] = useState<Option | null>(
+    linkedRep ? { id: linkedRep, label: params.get("representativeName") ?? `#${linkedRep}` } : null,
+  );
   const [party, setParty] = useState<Option | null>(null);
   const [product, setProduct] = useState<Option | null>(null);
   const [payment, setPayment] = useState<PaymentStatus | "">("");
@@ -221,6 +229,7 @@ function DocumentReport({ kind }: { kind: "sales" | "purchases" }) {
       from: from || undefined,
       to: to || undefined,
       [isSales ? "customerId" : "supplierId"]: party?.id,
+      representativeId: isSales ? representative?.id : undefined,
       productId: product?.id,
       paymentStatus: payment || undefined,
       status: status || undefined,
@@ -244,7 +253,16 @@ function DocumentReport({ kind }: { kind: "sales" | "purchases" }) {
       ),
     },
     { header: "Date", sortField: "date", render: (d) => formatDate(d.date) },
-    { header: partyLabel, sortField: "party", render: (d) => d.party },
+    ...(isSales
+      ? [
+          {
+            header: "Representative",
+            sortField: "party",
+            render: (d: DocumentRow) => d.party ?? <span className="text-slate-400">Unassigned</span>,
+          },
+          { header: "Customer", sortField: "customer", render: (d: DocumentRow) => d.customer ?? "-" },
+        ]
+      : [{ header: partyLabel, sortField: "party", render: (d: DocumentRow) => d.party }]),
     { header: "Items", align: "right", render: (d) => d.items },
     {
       header: "Total",
@@ -263,6 +281,15 @@ function DocumentReport({ kind }: { kind: "sales" | "purchases" }) {
       filters={
         <>
           <DateRange from={from} to={to} setFrom={setFrom} setTo={setTo} />
+          {isSales && (
+            <AsyncSelect
+              label="Representative"
+              value={representative}
+              onChange={setRepresentative}
+              load={loadAnyRepresentativeOptions}
+              placeholder="All representatives"
+            />
+          )}
           <AsyncSelect
             label={partyLabel}
             value={party}
@@ -289,6 +316,7 @@ function DocumentReport({ kind }: { kind: "sales" | "purchases" }) {
       filterSummary={describeFilters([
         ["From", from],
         ["To", to],
+        ["Representative", isSales ? representative?.label : null],
         [partyLabel, party?.label],
         ["Product", product?.label],
         ["Payment", payment ? PAYMENT_STATUS_LABELS[payment] : null],
@@ -408,6 +436,143 @@ export function StockMovementReportPage() {
       columns={columns}
       rows={r.data?.content}
       rowKey={(m) => m.id}
+      loading={r.loading}
+      error={r.error}
+      onRetry={r.reload}
+      sort={r.sort}
+      onSort={r.onSort}
+      page={r.data}
+      onPageChange={r.setPage}
+      pageSize={r.size}
+      onPageSizeChange={r.setSize}
+    />
+  );
+}
+
+// ------------------------------------------------------------------ Representative report
+
+export function RepresentativeReportPage() {
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
+  const [representative, setRepresentative] = useState<Option | null>(null);
+  const [area, setArea] = useState("");
+  const [active, setActive] = useState<"" | "true" | "false">("");
+  const debouncedArea = useDebouncedValue(area);
+  const blocked = !!rangeError(from, to);
+
+  const r = useReport(
+    reportService.representatives,
+    {
+      from: from || undefined,
+      to: to || undefined,
+      representativeId: representative?.id,
+      area: debouncedArea || undefined,
+      active: active === "" ? undefined : active === "true",
+    },
+    { field: "netSales", direction: "desc" },
+    blocked,
+  );
+
+  const drillDown = (row: RepresentativeRow) => {
+    if (row.id === null) return null;
+    const q = new URLSearchParams({ representativeId: String(row.id), representativeName: row.name });
+    if (from) q.set("from", from);
+    if (to) q.set("to", to);
+    return `/reports/sales?${q.toString()}`;
+  };
+
+  const columns: ReportColumn<RepresentativeRow>[] = [
+    {
+      header: "Representative",
+      sortField: "name",
+      render: (row) => {
+        const href = drillDown(row);
+        return (
+          <>
+            {href ? (
+              <Link href={href} className="font-medium text-blue-700 hover:underline print:text-slate-900">
+                {row.name}
+              </Link>
+            ) : (
+              <span className="text-slate-500" title="Invoices from before representatives were introduced">
+                {row.name}
+              </span>
+            )}
+            {!row.active && (
+              <span className="ml-1">
+                <Badge tone="red">Inactive</Badge>
+              </span>
+            )}
+          </>
+        );
+      },
+    },
+    { header: "Area", sortField: "area", render: (row) => row.area ?? "-" },
+    { header: "Customers", sortField: "customers", align: "right", render: (row) => row.customers },
+    { header: "Invoices", sortField: "invoices", align: "right", render: (row) => row.invoices },
+    { header: "Sales", sortField: "salesTotal", align: "right", render: (row) => formatCurrency(row.salesTotal) },
+    { header: "Returns", sortField: "returns", align: "right", render: (row) => (Number(row.returns) ? `− ${formatCurrency(row.returns)}` : "-") },
+    { header: "Net sales", sortField: "netSales", align: "right", render: (row) => <strong>{formatCurrency(row.netSales)}</strong> },
+    { header: "Paid", align: "right", render: (row) => formatCurrency(row.paid) },
+    {
+      header: "Unpaid + partial",
+      sortField: "owed",
+      align: "right",
+      render: (row) => <span className={Number(row.owed) > 0 ? "text-amber-700" : ""}>{formatCurrency(row.owed)}</span>,
+    },
+    { header: "Last sale", sortField: "lastSale", render: (row) => formatDate(row.lastSale) },
+  ];
+
+  return (
+    <ReportShell
+      title="Representative Report"
+      description="Sales billed to each representative: completed invoices and returns dated in the period. Click a name for their invoices."
+      filters={
+        <>
+          <DateRange from={from} to={to} setFrom={setFrom} setTo={setTo} />
+          <AsyncSelect
+            label="Representative"
+            value={representative}
+            onChange={setRepresentative}
+            load={loadAnyRepresentativeOptions}
+            placeholder="All representatives"
+          />
+          <TextField label="Area" value={area} onChange={(e) => setArea(e.target.value)} placeholder="Any area" />
+          <SelectField label="Status" value={active} onChange={(e) => setActive(e.target.value as "" | "true" | "false")}>
+            <option value="">All</option>
+            <option value="true">Active</option>
+            <option value="false">Inactive</option>
+          </SelectField>
+        </>
+      }
+      filterSummary={describeFilters([
+        ["From", from],
+        ["To", to],
+        ["Representative", representative?.label],
+        ["Area", debouncedArea],
+        ["Status", active === "" ? null : active === "true" ? "Active" : "Inactive"],
+      ])}
+      summary={
+        r.data && (
+          <>
+            <StatTile label="Representatives" value={r.data.summary.representatives.toLocaleString("en-PK")} />
+            <StatTile label="Invoices" value={r.data.summary.invoices.toLocaleString("en-PK")} />
+            <StatTile
+              label="Net sales"
+              value={formatCurrency(r.data.summary.netSales)}
+              detail={`Sales ${formatCurrency(r.data.summary.salesTotal)} − returns ${formatCurrency(r.data.summary.returns)}`}
+            />
+            <StatTile
+              label="Unpaid + partially paid"
+              value={formatCurrency(r.data.summary.owed)}
+              status={Number(r.data.summary.owed) > 0 ? { tone: "warning", text: "Outstanding" } : undefined}
+            />
+          </>
+        )
+      }
+      columns={columns}
+      rows={r.data?.content}
+      rowKey={(row) => row.id ?? -1}
       loading={r.loading}
       error={r.error}
       onRetry={r.reload}

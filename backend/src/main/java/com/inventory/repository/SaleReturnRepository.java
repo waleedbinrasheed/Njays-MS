@@ -18,10 +18,10 @@ import java.util.Optional;
 public interface SaleReturnRepository extends JpaRepository<SaleReturn, Long>, JpaSpecificationExecutor<SaleReturn> {
 
     @Override
-    @EntityGraph(attributePaths = {"sale", "sale.customer"})
+    @EntityGraph(attributePaths = {"sale", "sale.representative", "sale.customer"})
     Page<SaleReturn> findAll(Specification<SaleReturn> spec, Pageable pageable);
 
-    @EntityGraph(attributePaths = {"sale", "sale.customer", "items", "items.product"})
+    @EntityGraph(attributePaths = {"sale", "sale.representative", "sale.customer", "items", "items.product"})
     @Query("select r from SaleReturn r where r.id = :id")
     Optional<SaleReturn> findDetailedById(@Param("id") Long id);
 
@@ -41,14 +41,20 @@ public interface SaleReturnRepository extends JpaRepository<SaleReturn, Long>, J
         private Filters() {
         }
 
-        /** Return number, original document number or customer name. */
+        /** Return number, invoice number, representative or customer name (outer joins: either may be absent). */
         public static Specification<SaleReturn> matches(String search) {
             if (search == null || search.isBlank()) return null;
             String term = "%" + search.trim().toLowerCase(Locale.ROOT) + "%";
-            return (root, q, cb) -> cb.or(
-                    cb.like(cb.lower(root.get("returnNumber")), term),
-                    cb.like(cb.lower(root.get("sale").get("invoiceNumber")), term),
-                    cb.like(cb.lower(root.get("sale").get("customer").get("name")), term));
+            return (root, q, cb) -> {
+                var sale = root.join("sale");
+                var rep = sale.join("representative", jakarta.persistence.criteria.JoinType.LEFT);
+                var customer = sale.join("customer", jakarta.persistence.criteria.JoinType.LEFT);
+                return cb.or(
+                        cb.like(cb.lower(root.get("returnNumber")), term),
+                        cb.like(cb.lower(sale.get("invoiceNumber")), term),
+                        cb.like(cb.lower(cb.coalesce(rep.get("name"), "")), term),
+                        cb.like(cb.lower(cb.coalesce(customer.get("name"), "")), term));
+            };
         }
 
         public static Specification<SaleReturn> document(Long saleId) {

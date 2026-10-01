@@ -50,8 +50,11 @@ export interface DocumentRow {
   id: number;
   number: string;
   date: string;
-  partyId: number;
-  party: string;
+  /** Buyer: representative (sales; null on old invoices) or supplier (purchases). */
+  partyId: number | null;
+  party: string | null;
+  /** Sales only: the optional customer. */
+  customer: string | null;
   items: number;
   total: number;
   paymentStatus: PaymentStatus;
@@ -64,6 +67,31 @@ export interface DocumentSummary {
   paid: number;
   unpaid: number;
   partial: number;
+}
+
+export interface RepresentativeRow {
+  /** Null for the "Unassigned" row (invoices from before representatives existed). */
+  id: number | null;
+  name: string;
+  area: string | null;
+  active: boolean;
+  customers: number;
+  invoices: number;
+  salesTotal: number;
+  returns: number;
+  netSales: number;
+  paid: number;
+  owed: number;
+  lastSale: string | null;
+}
+export interface RepresentativeSummary {
+  rows: number;
+  representatives: number;
+  invoices: number;
+  salesTotal: number;
+  returns: number;
+  netSales: number;
+  owed: number;
 }
 
 export interface MovementRow {

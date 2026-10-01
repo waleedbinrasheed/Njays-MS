@@ -98,6 +98,15 @@ one company-wide inventory, one stock location.
   active; unit price must be above zero. Stock is checked while each product row is locked, so two
   cashiers cannot sell the same last copy (`SaleConcurrencyIT`). Cancelling returns all stock and is
   always possible; partial returns are handled by Returns (Phase 7).
+- **Representatives (client change, V10):** the shop sells to representatives, who supply their own
+  customers. A sale is billed to its representative (required, active); the customer on a sale is
+  optional and must belong to that representative. Every customer has a representative (except the
+  legacy walk-in customer). The built-in "Counter Sales" representative replaces the walk-in customer
+  for counter sales. Invoices from before V10 keep their customer and show as "Unassigned"
+  (`chk_sale_party`: a sale has a representative or a customer). Representatives with customers or
+  sales can only be deactivated; "move all customers" reassigns in one statement (bumping versions).
+  The Representative report (customers, invoices, sales, returns, net, paid, owed, last sale) includes
+  an "Unassigned" row so its totals match the Sales report.
 - **Returns:** separate numbered documents (`SRT-…` sales returns, `PRT-…` purchase returns), each line
   linked to the original invoice/purchase line. The original document row is locked while a return is
   recorded, so concurrent returns can never exceed the quantity on it (`ReturnConcurrencyIT`). Amount per

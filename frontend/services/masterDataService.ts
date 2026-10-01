@@ -9,6 +9,9 @@ import type {
   PartyInput,
   Product,
   ProductInput,
+  Representative,
+  RepresentativeInput,
+  RepresentativeRef,
 } from "@/types/master";
 
 export interface ListQuery extends PageQuery {
@@ -39,7 +42,14 @@ export const productService = crud<Product, ProductInput>("/products");
 export const publisherService = crud<Party, PartyInput>("/publishers");
 export const supplierService = crud<Party, PartyInput>("/suppliers");
 export const categoryService = crud<Category, CategoryInput>("/categories");
-export const customerService = {
-  ...crud<Customer, CustomerInput>("/customers"),
-  walkIn: () => api.get<Customer>("/customers/walk-in"),
+export const customerService = crud<Customer, CustomerInput>("/customers");
+
+export const representativeService = {
+  ...crud<Representative, RepresentativeInput>("/representatives"),
+  /** The built-in "Counter Sales" representative, preselected for counter sales. */
+  counter: (signal?: AbortSignal) => api.get<Representative>("/representatives/counter", undefined, signal),
+  moveCustomers: (fromId: number, targetRepresentativeId: number) =>
+    api.post<{ moved: number; from: RepresentativeRef; to: RepresentativeRef }>(`/representatives/${fromId}/move-customers`, {
+      targetRepresentativeId,
+    }),
 };

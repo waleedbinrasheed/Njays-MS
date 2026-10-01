@@ -37,11 +37,13 @@ public class CustomerController {
     @PreAuthorize("hasAuthority('MASTER_DATA_VIEW')")
     public PageResponse<CustomerResponse> list(@RequestParam(required = false) String search,
                                                @RequestParam(required = false) Boolean active,
+                                               @RequestParam(required = false) Long representativeId,
+                                               @RequestParam(defaultValue = "false") boolean unassigned,
                                                @PageableDefault(sort = "name") Pageable pageable) {
-        return service.search(search, active, SORTABLE.check(pageable));
+        return service.search(search, active, representativeId, unassigned, SORTABLE.check(pageable));
     }
 
-    /** Declared before /{id} for readability; Spring matches the literal path first anyway. */
+    /** The pre-representative default customer (kept for old invoices). */
     @GetMapping("/walk-in")
     @PreAuthorize("hasAuthority('MASTER_DATA_VIEW')")
     public CustomerResponse walkIn() {

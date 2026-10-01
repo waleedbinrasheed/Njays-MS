@@ -1,5 +1,11 @@
 import type { Option } from "@/components/ui/AsyncSelect";
-import { categoryService, customerService, publisherService, supplierService } from "@/services/masterDataService";
+import {
+  categoryService,
+  customerService,
+  publisherService,
+  representativeService,
+  supplierService,
+} from "@/services/masterDataService";
 
 const LOOKUP_SIZE = 20;
 
@@ -16,7 +22,34 @@ export async function loadSupplierOptions(search: string, signal: AbortSignal): 
 
 export async function loadCustomerOptions(search: string, signal: AbortSignal): Promise<Option[]> {
   const page = await customerService.list({ search, active: true, size: LOOKUP_SIZE, sort: "name,asc" }, signal);
-  return page.content.map((c) => ({ id: c.id, label: c.name, detail: [c.phone, c.walkIn ? "Default" : null].filter(Boolean).join(" · ") || undefined }));
+  return page.content.map((c) => ({
+    id: c.id,
+    label: c.name,
+    detail: [c.phone, c.representative ? `Rep: ${c.representative.name}` : null].filter(Boolean).join(" · ") || undefined,
+  }));
+}
+
+/** Active representatives (for assigning customers and for selling). */
+export async function loadRepresentativeOptions(search: string, signal: AbortSignal): Promise<Option[]> {
+  const page = await representativeService.list({ search, active: true, size: LOOKUP_SIZE, sort: "name,asc" }, signal);
+  return page.content.map((r) => ({ id: r.id, label: r.name, detail: [r.area, r.phone].filter(Boolean).join(" · ") || undefined }));
+}
+
+/** All representatives including inactive ones (for filters and reports). */
+export async function loadAnyRepresentativeOptions(search: string, signal: AbortSignal): Promise<Option[]> {
+  const page = await representativeService.list({ search, size: LOOKUP_SIZE, sort: "name,asc" }, signal);
+  return page.content.map((r) => ({ id: r.id, label: r.name, detail: [r.area, r.active ? null : "Inactive"].filter(Boolean).join(" · ") || undefined }));
+}
+
+/** Active customers belonging to one representative. */
+export function representativeCustomerLoader(representativeId: number) {
+  return async (search: string, signal: AbortSignal): Promise<Option[]> => {
+    const page = await customerService.list(
+      { search, active: true, representativeId, size: LOOKUP_SIZE, sort: "name,asc" },
+      signal,
+    );
+    return page.content.map((c) => ({ id: c.id, label: c.name, detail: c.phone ?? undefined }));
+  };
 }
 
 export async function loadCategoryOptions(search: string, signal: AbortSignal): Promise<Option[]> {

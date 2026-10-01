@@ -39,7 +39,8 @@ import org.springframework.security.web.csrf.CsrfTokenRepository;
 public class SecurityConfig {
 
     private static final String[] MASTER_DATA = {
-            "/api/products/**", "/api/publishers/**", "/api/categories/**", "/api/suppliers/**", "/api/customers/**"};
+            "/api/products/**", "/api/publishers/**", "/api/categories/**", "/api/suppliers/**", "/api/customers/**",
+            "/api/representatives/**"};
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http,
