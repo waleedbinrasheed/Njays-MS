@@ -12,6 +12,7 @@ import com.inventory.mapper.MasterDataMapper;
 import com.inventory.repository.CustomerRepository;
 import com.inventory.repository.RepresentativeRepository;
 import com.inventory.repository.SaleRepository;
+import com.inventory.repository.SampleIssueRepository;
 import com.inventory.security.CurrentUser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,12 +43,14 @@ public class RepresentativeService {
     private final RepresentativeRepository representatives;
     private final CustomerRepository customers;
     private final SaleRepository sales;
+    private final SampleIssueRepository samples;
 
     public RepresentativeService(RepresentativeRepository representatives, CustomerRepository customers,
-                                 SaleRepository sales) {
+                                 SaleRepository sales, SampleIssueRepository samples) {
         this.representatives = representatives;
         this.customers = customers;
         this.sales = sales;
+        this.samples = samples;
     }
 
     @Transactional(readOnly = true)
@@ -109,7 +112,8 @@ public class RepresentativeService {
         if (r.isBuiltIn()) {
             throw new BusinessException("The Counter Sales representative cannot be deleted");
         }
-        if (customers.countByRepresentativeId(id) > 0 || sales.existsByRepresentativeId(id)) {
+        if (customers.countByRepresentativeId(id) > 0 || sales.existsByRepresentativeId(id)
+                || samples.existsByRepresentativeId(id)) {
             throw inUse(label);
         }
         representatives.delete(r);

@@ -15,5 +15,11 @@ public enum TransactionType {
     /** Reversal of a cancelled purchase (−). */
     PURCHASE_CANCEL,
     /** Reversal of a cancelled sale (+). */
-    SALE_CANCEL
+    SALE_CANCEL,
+    /** Books given to a representative as samples (−). */
+    SAMPLE_ISSUE,
+    /** Samples brought back by the representative (+). */
+    SAMPLE_RETURN,
+    /** Reversal of a cancelled sample issue (+). */
+    SAMPLE_CANCEL
 }

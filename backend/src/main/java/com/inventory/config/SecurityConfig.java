@@ -80,6 +80,9 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/sales/**").hasAuthority("SALE_VIEW")
                         .requestMatchers(HttpMethod.POST, "/api/sales/*/cancel").hasAuthority("SALE_CANCEL")
                         .requestMatchers("/api/sales/**").hasAuthority("SALE_CREATE")
+                        .requestMatchers(HttpMethod.GET, "/api/samples/**", "/api/sample-returns/**",
+                                "/api/sample-reports/**").hasAuthority("SAMPLE_VIEW")
+                        .requestMatchers("/api/samples/**", "/api/sample-returns/**").hasAuthority("SAMPLE_MANAGE")
                         .requestMatchers(HttpMethod.GET, "/api/reports/**").hasAuthority("REPORT_VIEW")
                         .requestMatchers(HttpMethod.GET, "/api/dashboard").hasAuthority("DASHBOARD_VIEW")
                         .requestMatchers("/api/**").authenticated()

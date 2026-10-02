@@ -36,6 +36,14 @@ export const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
+    label: "Samples",
+    items: [
+      { label: "New Sample Issue", href: "/samples/new", permission: "SAMPLE_MANAGE", ready: true },
+      { label: "Sample Issues", href: "/samples", permission: "SAMPLE_VIEW", ready: true },
+      { label: "Sample Returns", href: "/samples/returns", permission: "SAMPLE_VIEW", ready: true },
+    ],
+  },
+  {
     label: "Purchases",
     items: [
       { label: "New Purchase", href: "/purchases/new", permission: "PURCHASE_CREATE", ready: true },
@@ -63,6 +71,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { label: "Stock Movement Report", href: "/reports/stock-movement", permission: "REPORT_VIEW", ready: true },
       { label: "Low Stock Report", href: "/reports/low-stock", permission: "REPORT_VIEW", ready: true },
       { label: "Representative Report", href: "/reports/representatives", permission: "REPORT_VIEW", ready: true },
+      { label: "Sample Report", href: "/reports/samples", permission: "SAMPLE_VIEW", ready: true },
     ],
   },
   {

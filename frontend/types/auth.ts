@@ -26,4 +26,6 @@ export type PermissionCode =
   | "SALE_CREATE"
   | "SALE_CANCEL"
   | "RETURN_CREATE"
-  | "REPORT_VIEW";
+  | "REPORT_VIEW"
+  | "SAMPLE_VIEW"
+  | "SAMPLE_MANAGE";

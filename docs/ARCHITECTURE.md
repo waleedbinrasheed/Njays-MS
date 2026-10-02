@@ -57,7 +57,7 @@ one company-wide inventory, one stock location.
   on stock transactions, FKs everywhere, unique `inventory.product_id`.
 - Multi-line documents lock rows in product-id order to avoid deadlocks.
 - Transaction types: `PURCHASE`, `SALE`, `SALE_RETURN`, `PURCHASE_RETURN`, `ADJUSTMENT`,
-  `PURCHASE_CANCEL`, `SALE_CANCEL`.
+  `PURCHASE_CANCEL`, `SALE_CANCEL`, `SAMPLE_ISSUE`, `SAMPLE_RETURN`, `SAMPLE_CANCEL`.
 - Saved sales/purchases are immutable. Cancelling writes reversing movements; returns do
   partial reversals referencing the original document line.
 - `InventoryService` methods are `Propagation.MANDATORY`: they refuse to run unless the calling
@@ -107,6 +107,18 @@ one company-wide inventory, one stock location.
   sales can only be deactivated; "move all customers" reassigns in one statement (bumping versions).
   The Representative report (customers, invoices, sales, returns, net, paid, owed, last sale) includes
   an "Unassigned" row so its totals match the Sales report.
+- **Samples (client change, V11):** books handed to a representative as a "SAMPLE SALE" (`SMP-…`), kept
+  completely apart from sales: never in sales totals, the Sales/Representative reports or dashboard sales.
+  Several books per sample; the sample price defaults to the book's purchase price, may be edited, is never
+  above the selling price, and is saved on the line. Issuing takes stock (checked under the row lock). Sample
+  returns (`SMR-…`) are partial, valued at the original sample price, never more than is still out (sample row
+  locked, `SampleConcurrencyIT`), and put stock back, even for inactive books/representatives. Outstanding =
+  issued − returned (quantity and amount) is tracked and reported only; nothing is paid. Status is derived:
+  ISSUED → PARTIALLY_RETURNED → RETURNED; cancel (reason required, all stock back) only while nothing is
+  returned. Counter Sales cannot receive samples. Permissions: `SAMPLE_VIEW` (ADMIN, NORMAL_USER) for lists,
+  invoices, representative sample history and the Sample report; `SAMPLE_MANAGE` (ADMIN) to issue, return and
+  cancel. The Sample report shows issued/returned/outstanding per representative or per issued book
+  (filters: representative, book, issue date range, status); cancelled samples are listed but not counted.
 - **Returns:** separate numbered documents (`SRT-…` sales returns, `PRT-…` purchase returns), each line
   linked to the original invoice/purchase line. The original document row is locked while a return is
   recorded, so concurrent returns can never exceed the quantity on it (`ReturnConcurrencyIT`). Amount per

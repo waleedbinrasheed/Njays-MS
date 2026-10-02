@@ -6,5 +6,7 @@ public enum ReferenceType {
     SALE,
     SALE_RETURN,
     PURCHASE_RETURN,
-    ADJUSTMENT
+    ADJUSTMENT,
+    SAMPLE_ISSUE,
+    SAMPLE_RETURN
 }

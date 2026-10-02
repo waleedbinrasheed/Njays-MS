@@ -42,7 +42,8 @@ import java.util.Set;
 public class InventoryService {
 
     /** New stock cannot be bought or sold for inactive products; reversals and corrections are still allowed. */
-    private static final Set<TransactionType> REQUIRES_ACTIVE_PRODUCT = EnumSet.of(TransactionType.PURCHASE, TransactionType.SALE);
+    private static final Set<TransactionType> REQUIRES_ACTIVE_PRODUCT = EnumSet.of(TransactionType.PURCHASE, TransactionType.SALE,
+            TransactionType.SAMPLE_ISSUE);
 
     private final InventoryRepository inventories;
     private final StockTransactionRepository transactions;

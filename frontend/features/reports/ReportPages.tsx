@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useSearchParams } from "next/navigation";
 import { AsyncSelect, type Option } from "@/components/ui/AsyncSelect";
 import { Badge } from "@/components/ui/Feedback";
@@ -18,11 +18,14 @@ import {
 } from "@/features/master/lookups";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { reportService } from "@/services/reportService";
+import { sampleService } from "@/services/sampleService";
 import type { StockStatusFilter, TransactionType } from "@/types/inventory";
 import type { DocumentStatus, PaymentStatus } from "@/types/purchase";
 import type { DocumentRow, InventoryRow, LowStockRow, MovementRow, RepresentativeRow } from "@/types/report";
+import type { SampleReportSummary, SampleRepresentativeRow, SampleStatus } from "@/types/sample";
 import { formatCurrency, formatDate, formatDateTime } from "@/utils/format";
-import { PAYMENT_STATUS_LABELS, TRANSACTION_TYPE_LABELS, formatSignedQuantity } from "@/utils/labels";
+import { PAYMENT_STATUS_LABELS, SAMPLE_STATUS_LABELS, TRANSACTION_TYPE_LABELS, formatSignedQuantity } from "@/utils/labels";
+import { sampleLineColumns } from "@/features/samples/SampleLinesTable";
 import { ReportShell, type ReportColumn } from "./ReportShell";
 import { describeFilters, useReport } from "./useReport";
 
@@ -573,6 +576,176 @@ export function RepresentativeReportPage() {
       columns={columns}
       rows={r.data?.content}
       rowKey={(row) => row.id ?? -1}
+      loading={r.loading}
+      error={r.error}
+      onRetry={r.reload}
+      sort={r.sort}
+      onSort={r.onSort}
+      page={r.data}
+      onPageChange={r.setPage}
+      pageSize={r.size}
+      onPageSizeChange={r.setSize}
+    />
+  );
+}
+
+// ------------------------------------------------------------------ Sample report
+
+type SampleView = "representatives" | "lines";
+
+interface SampleViewProps {
+  filters: Record<string, string | number | undefined>;
+  blocked: boolean;
+  filterNode: ReactNode;
+  filterSummary: string;
+}
+
+/** Issued / returned / outstanding samples, per representative or per issued book. Not part of sales. */
+export function SampleReportPage() {
+  const [view, setView] = useState<SampleView>("representatives");
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
+  const [representative, setRepresentative] = useState<Option | null>(null);
+  const [product, setProduct] = useState<Option | null>(null);
+  const [status, setStatus] = useState<SampleStatus | "">("");
+
+  const props: SampleViewProps = {
+    filters: {
+      from: from || undefined,
+      to: to || undefined,
+      representativeId: representative?.id,
+      productId: product?.id,
+      status: status || undefined,
+    },
+    blocked: !!rangeError(from, to),
+    filterNode: (
+      <>
+        <SelectField label="View" value={view} onChange={(e) => setView(e.target.value as SampleView)}>
+          <option value="representatives">By representative</option>
+          <option value="lines">Detail (each book issued)</option>
+        </SelectField>
+        <DateRange from={from} to={to} setFrom={setFrom} setTo={setTo} />
+        <AsyncSelect label="Representative" value={representative} onChange={setRepresentative} load={loadAnyRepresentativeOptions} placeholder="All representatives" />
+        <AsyncSelect label="Book" value={product} onChange={setProduct} load={loadStockedProductOptions} placeholder="All books" />
+        <SelectField label="Status" value={status} onChange={(e) => setStatus(e.target.value as SampleStatus | "")}>
+          <option value="">All</option>
+          {Object.entries(SAMPLE_STATUS_LABELS).map(([k, label]) => (
+            <option key={k} value={k}>
+              {label}
+            </option>
+          ))}
+        </SelectField>
+      </>
+    ),
+    filterSummary: describeFilters([
+      ["View", view === "representatives" ? "By representative" : "Detail"],
+      ["Issued from", from],
+      ["Issued to", to],
+      ["Representative", representative?.label],
+      ["Book", product?.label],
+      ["Status", status ? SAMPLE_STATUS_LABELS[status] : null],
+    ]),
+  };
+
+  return view === "representatives" ? <SampleRepresentativeView {...props} /> : <SampleLineView {...props} />;
+}
+
+function SampleSummaryTiles({ s, showRepresentatives }: { s: SampleReportSummary; showRepresentatives: boolean }) {
+  return (
+    <>
+      <StatTile
+        label={showRepresentatives ? "Representatives / samples" : "Samples"}
+        value={showRepresentatives ? `${s.rows.toLocaleString("en-PK")} / ${s.samples.toLocaleString("en-PK")}` : s.samples.toLocaleString("en-PK")}
+      />
+      <StatTile label="Issued" value={formatCurrency(s.issuedAmount)} detail={`${s.issuedQuantity.toLocaleString("en-PK")} unit(s)`} />
+      <StatTile label="Returned" value={formatCurrency(s.returnedAmount)} detail={`${s.returnedQuantity.toLocaleString("en-PK")} unit(s)`} />
+      <StatTile
+        label="Outstanding"
+        value={formatCurrency(s.outstandingAmount)}
+        detail={`${s.outstandingQuantity.toLocaleString("en-PK")} unit(s) still with representatives`}
+        status={s.outstandingQuantity > 0 ? { tone: "warning", text: "Out" } : undefined}
+      />
+    </>
+  );
+}
+
+const SAMPLE_DESCRIPTION =
+  "Samples given to representatives (SAMPLE SALE, not retail). Date filters use the issue date; cancelled samples are not counted.";
+
+function SampleRepresentativeView({ filters, blocked, filterNode, filterSummary }: SampleViewProps) {
+  const r = useReport(sampleService.reportRepresentatives, filters, { field: "outstandingAmount", direction: "desc" }, blocked);
+  const columns: ReportColumn<SampleRepresentativeRow>[] = [
+    {
+      header: "Representative",
+      sortField: "name",
+      render: (row) => (
+        <>
+          <Link href={`/master/representatives/${row.id}`} className="font-medium text-blue-700 hover:underline print:text-slate-900">
+            {row.name}
+          </Link>
+          {!row.active && (
+            <span className="ml-1">
+              <Badge tone="red">Inactive</Badge>
+            </span>
+          )}
+        </>
+      ),
+    },
+    { header: "Area", sortField: "area", render: (row) => row.area ?? "-" },
+    { header: "Samples", sortField: "samples", align: "right", render: (row) => row.samples },
+    { header: "Issued qty", align: "right", render: (row) => row.issuedQuantity },
+    { header: "Issued amount", sortField: "issuedAmount", align: "right", render: (row) => formatCurrency(row.issuedAmount) },
+    { header: "Returned qty", align: "right", render: (row) => row.returnedQuantity },
+    { header: "Returned amount", sortField: "returnedAmount", align: "right", render: (row) => formatCurrency(row.returnedAmount) },
+    { header: "Outstanding qty", sortField: "outstandingQuantity", align: "right", render: (row) => <strong>{row.outstandingQuantity}</strong> },
+    {
+      header: "Outstanding amount",
+      sortField: "outstandingAmount",
+      align: "right",
+      render: (row) => (
+        <strong className={Number(row.outstandingAmount) > 0 ? "text-amber-700 print:text-slate-900" : ""}>
+          {formatCurrency(row.outstandingAmount)}
+        </strong>
+      ),
+    },
+    { header: "Last issue", sortField: "lastIssue", render: (row) => formatDate(row.lastIssue) },
+  ];
+
+  return (
+    <ReportShell
+      title="Sample Report"
+      description={SAMPLE_DESCRIPTION}
+      filters={filterNode}
+      filterSummary={filterSummary}
+      summary={r.data && <SampleSummaryTiles s={r.data.summary} showRepresentatives />}
+      columns={columns}
+      rows={r.data?.content}
+      rowKey={(row) => row.id}
+      loading={r.loading}
+      error={r.error}
+      onRetry={r.reload}
+      sort={r.sort}
+      onSort={r.onSort}
+      page={r.data}
+      onPageChange={r.setPage}
+      pageSize={r.size}
+      onPageSizeChange={r.setSize}
+    />
+  );
+}
+
+function SampleLineView({ filters, blocked, filterNode, filterSummary }: SampleViewProps) {
+  const r = useReport(sampleService.reportLines, filters, { field: "date", direction: "desc" }, blocked);
+  return (
+    <ReportShell
+      title="Sample Report"
+      description={SAMPLE_DESCRIPTION}
+      filters={filterNode}
+      filterSummary={filterSummary}
+      summary={r.data && <SampleSummaryTiles s={r.data.summary} showRepresentatives={false} />}
+      columns={sampleLineColumns(true)}
+      rows={r.data?.content}
+      rowKey={(row) => row.itemId}
       loading={r.loading}
       error={r.error}
       onRetry={r.reload}

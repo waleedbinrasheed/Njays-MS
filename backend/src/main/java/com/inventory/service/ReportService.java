@@ -156,7 +156,7 @@ public class ReportService {
     }
 
     /** Translates the requested sort through a whitelist into SQL, always ending with a unique tie-breaker. */
-    private static Paging paging(Pageable pageable, Map<String, String> allowed, String defaultOrder, String idColumn) {
+    static Paging paging(Pageable pageable, Map<String, String> allowed, String defaultOrder, String idColumn) {
         List<String> parts = new ArrayList<>();
         for (Sort.Order o : pageable.getSort()) {
             String column = allowed.get(o.getProperty());
@@ -169,13 +169,13 @@ public class ReportService {
         return new Paging((int) pageable.getOffset(), pageable.getPageSize(), order + ", " + idColumn + " DESC");
     }
 
-    private static <T, S> ReportPage<T, S> page(List<T> rows, long total, Pageable pageable, S summary) {
+    static <T, S> ReportPage<T, S> page(List<T> rows, long total, Pageable pageable, S summary) {
         int size = pageable.getPageSize();
         int pages = size == 0 ? 0 : (int) ((total + size - 1) / size);
         return new ReportPage<>(rows, pageable.getPageNumber(), size, total, pages, summary);
     }
 
-    private static void checkRange(LocalDate from, LocalDate to) {
+    static void checkRange(LocalDate from, LocalDate to) {
         if (from != null && to != null && to.isBefore(from)) {
             throw new BusinessException("'To' date must not be before 'from' date");
         }

@@ -14,6 +14,8 @@ export interface DraftLine {
   title: string;
   isbn: string | null;
   stock: number;
+  /** The book's selling price when the line was added (samples may not be priced above it). */
+  sellingPrice?: number;
   quantity: string;
   unitPrice: string;
   discountPercent: string;
@@ -37,6 +39,8 @@ interface LineItemsEditorProps {
   lineErrors?: Record<number, string>;
   /** Sales show stock and warn when quantity exceeds it. */
   showStockWarning?: boolean;
+  /** Samples: no discount/tax columns, and the price may not exceed the selling price. */
+  simple?: boolean;
 }
 
 /**
@@ -50,6 +54,7 @@ export function LineItemsEditor({
   defaultPrice,
   lineErrors = {},
   showStockWarning = false,
+  simple = false,
 }: LineItemsEditorProps) {
   const qtyRefs = useRef(new Map<number, HTMLInputElement>());
 
@@ -67,6 +72,7 @@ export function LineItemsEditor({
           title: item.title,
           isbn: item.isbn,
           stock: item.quantity,
+          sellingPrice: item.sellingPrice,
           quantity: "1",
           unitPrice: String(defaultPrice(item)),
           discountPercent: "",
@@ -105,8 +111,12 @@ export function LineItemsEditor({
               <th scope="col" className="px-3 py-2 font-medium">Product</th>
               <th scope="col" className="w-24 px-3 py-2 text-right font-medium">Qty</th>
               <th scope="col" className="w-32 px-3 py-2 text-right font-medium">{priceLabel}</th>
-              <th scope="col" className="w-24 px-3 py-2 text-right font-medium">Disc %</th>
-              <th scope="col" className="w-24 px-3 py-2 text-right font-medium">Tax %</th>
+              {!simple && (
+                <>
+                  <th scope="col" className="w-24 px-3 py-2 text-right font-medium">Disc %</th>
+                  <th scope="col" className="w-24 px-3 py-2 text-right font-medium">Tax %</th>
+                </>
+              )}
               <th scope="col" className="w-32 px-3 py-2 text-right font-medium">Line total</th>
               <th scope="col" className="w-10 px-3 py-2">
                 <span className="sr-only">Remove</span>
@@ -117,6 +127,7 @@ export function LineItemsEditor({
             {lines.map((l, index) => {
               const preview = previewLine(toPricedLine(l));
               const overStock = showStockWarning && num(l.quantity) > l.stock;
+              const overPrice = simple && l.sellingPrice !== undefined && num(l.unitPrice) > l.sellingPrice;
               const error = lineErrors[l.productId];
               return (
                 <tr key={l.productId} className="align-top">
@@ -127,6 +138,11 @@ export function LineItemsEditor({
                       {l.isbn ?? "No ISBN"} · In stock: {l.stock}
                     </div>
                     {overStock && <div className="text-xs font-medium text-red-600">Only {l.stock} in stock</div>}
+                    {simple && l.sellingPrice !== undefined && (
+                      <div className={`text-xs ${overPrice ? "font-medium text-red-600" : "text-slate-500"}`}>
+                        {overPrice ? "Above the " : ""}selling price {formatCurrency(l.sellingPrice)}
+                      </div>
+                    )}
                     {error && <div className="text-xs font-medium text-red-600">{error}</div>}
                   </td>
                   <td className="px-3 py-2">
@@ -152,39 +168,43 @@ export function LineItemsEditor({
                       inputMode="decimal"
                       min="0"
                       step="0.01"
-                      className={cell}
+                      className={`${cell} ${overPrice ? "border-red-400" : ""}`}
                       value={l.unitPrice}
                       onChange={(e) => update(l.productId, { unitPrice: e.target.value })}
                     />
                   </td>
-                  <td className="px-3 py-2">
-                    <input
-                      aria-label={`Discount percent of ${l.title}`}
-                      type="number"
-                      inputMode="decimal"
-                      min="0"
-                      max="100"
-                      step="0.01"
-                      placeholder="0"
-                      className={cell}
-                      value={l.discountPercent}
-                      onChange={(e) => update(l.productId, { discountPercent: e.target.value })}
-                    />
-                  </td>
-                  <td className="px-3 py-2">
-                    <input
-                      aria-label={`Tax percent of ${l.title}`}
-                      type="number"
-                      inputMode="decimal"
-                      min="0"
-                      max="100"
-                      step="0.01"
-                      placeholder="0"
-                      className={cell}
-                      value={l.taxPercent}
-                      onChange={(e) => update(l.productId, { taxPercent: e.target.value })}
-                    />
-                  </td>
+                  {!simple && (
+                    <>
+                      <td className="px-3 py-2">
+                        <input
+                          aria-label={`Discount percent of ${l.title}`}
+                          type="number"
+                          inputMode="decimal"
+                          min="0"
+                          max="100"
+                          step="0.01"
+                          placeholder="0"
+                          className={cell}
+                          value={l.discountPercent}
+                          onChange={(e) => update(l.productId, { discountPercent: e.target.value })}
+                        />
+                      </td>
+                      <td className="px-3 py-2">
+                        <input
+                          aria-label={`Tax percent of ${l.title}`}
+                          type="number"
+                          inputMode="decimal"
+                          min="0"
+                          max="100"
+                          step="0.01"
+                          placeholder="0"
+                          className={cell}
+                          value={l.taxPercent}
+                          onChange={(e) => update(l.productId, { taxPercent: e.target.value })}
+                        />
+                      </td>
+                    </>
+                  )}
                   <td className="whitespace-nowrap px-3 py-2 text-right font-medium tabular-nums text-slate-900">
                     {formatCurrency(preview.total)}
                   </td>

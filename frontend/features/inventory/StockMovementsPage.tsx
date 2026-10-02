@@ -18,7 +18,7 @@ const PAGE_SIZE = 50;
 
 function referenceLabel(t: StockTransaction): string {
   if (!t.referenceType || t.referenceId === null) return "-";
-  const prefix = { ADJUSTMENT: "ADJ", PURCHASE: "PUR", SALE: "INV", SALE_RETURN: "SRT", PURCHASE_RETURN: "PRT" }[t.referenceType];
+  const prefix = { ADJUSTMENT: "ADJ", PURCHASE: "PUR", SALE: "INV", SALE_RETURN: "SRT", PURCHASE_RETURN: "PRT", SAMPLE_ISSUE: "SMP", SAMPLE_RETURN: "SMR" }[t.referenceType];
   return `${prefix}-${t.referenceId}`;
 }
 

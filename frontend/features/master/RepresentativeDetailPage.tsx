@@ -11,6 +11,7 @@ import { PageSpinner, Spinner } from "@/components/ui/Spinner";
 import { useToast } from "@/components/ui/Toast";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { DocumentStatusBadge, PaymentStatusBadge } from "@/features/documents/StatusBadges";
+import { RepresentativeSamples } from "@/features/samples/RepresentativeSamples";
 import { useApiQuery } from "@/hooks/useApiQuery";
 import { ApiError } from "@/services/apiClient";
 import { customerService, representativeService } from "@/services/masterDataService";
@@ -125,6 +126,8 @@ export function RepresentativeDetailPage({ id }: { id: number }) {
           </section>
         )}
       </div>
+
+      {hasPermission("SAMPLE_VIEW") && !r.builtIn && <RepresentativeSamples representativeId={r.id} />}
 
       {editing && (
         <RepresentativeForm

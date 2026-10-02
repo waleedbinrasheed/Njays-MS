@@ -10,9 +10,19 @@ export type TransactionType =
   | "PURCHASE_RETURN"
   | "ADJUSTMENT"
   | "PURCHASE_CANCEL"
-  | "SALE_CANCEL";
+  | "SALE_CANCEL"
+  | "SAMPLE_ISSUE"
+  | "SAMPLE_RETURN"
+  | "SAMPLE_CANCEL";
 
-export type ReferenceType = "PURCHASE" | "SALE" | "SALE_RETURN" | "PURCHASE_RETURN" | "ADJUSTMENT";
+export type ReferenceType =
+  | "PURCHASE"
+  | "SALE"
+  | "SALE_RETURN"
+  | "PURCHASE_RETURN"
+  | "ADJUSTMENT"
+  | "SAMPLE_ISSUE"
+  | "SAMPLE_RETURN";
 
 export type AdjustmentReason = "DAMAGED" | "LOST" | "COUNT_CORRECTION" | "FOUND" | "OTHER";
 

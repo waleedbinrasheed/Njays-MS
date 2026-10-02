@@ -205,7 +205,9 @@ public class ReportRepository {
             LEFT JOIN sale s ON t.reference_type = 'SALE' AND s.id = t.reference_id
             LEFT JOIN purchase pu ON t.reference_type = 'PURCHASE' AND pu.id = t.reference_id
             LEFT JOIN sale_return sr ON t.reference_type = 'SALE_RETURN' AND sr.id = t.reference_id
-            LEFT JOIN purchase_return pr ON t.reference_type = 'PURCHASE_RETURN' AND pr.id = t.reference_id""";
+            LEFT JOIN purchase_return pr ON t.reference_type = 'PURCHASE_RETURN' AND pr.id = t.reference_id
+            LEFT JOIN sample_issue smp ON t.reference_type = 'SAMPLE_ISSUE' AND smp.id = t.reference_id
+            LEFT JOIN sample_return smr ON t.reference_type = 'SAMPLE_RETURN' AND smr.id = t.reference_id""";
 
     private static final String REFERENCE_LABEL = """
             CASE t.reference_type
@@ -214,6 +216,8 @@ public class ReportRepository {
                 WHEN 'SALE_RETURN' THEN sr.return_number
                 WHEN 'PURCHASE_RETURN' THEN pr.return_number
                 WHEN 'ADJUSTMENT' THEN 'ADJ-' || t.reference_id
+                WHEN 'SAMPLE_ISSUE' THEN smp.sample_number
+                WHEN 'SAMPLE_RETURN' THEN smr.return_number
             END""";
 
     public List<MovementRow> movementRows(Where w, Paging page) {

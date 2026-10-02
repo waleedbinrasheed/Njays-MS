@@ -42,7 +42,7 @@ class RoleManagementIT extends ApiTestBase {
 
         mvc.perform(get("/api/permissions").session(session))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(16)))
+                .andExpect(jsonPath("$", hasSize(18)))
                 .andExpect(jsonPath("$[*].code", hasItem("SALE_CREATE")));
     }
 
@@ -87,7 +87,7 @@ class RoleManagementIT extends ApiTestBase {
                         "permissions", List.of())).session(session))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.description").value("Owners"))
-                .andExpect(jsonPath("$.permissions", hasSize(16)));
+                .andExpect(jsonPath("$.permissions", hasSize(18)));
     }
 
     @Test

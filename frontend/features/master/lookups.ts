@@ -35,6 +35,14 @@ export async function loadRepresentativeOptions(search: string, signal: AbortSig
   return page.content.map((r) => ({ id: r.id, label: r.name, detail: [r.area, r.phone].filter(Boolean).join(" · ") || undefined }));
 }
 
+/** Active representatives who can take samples (not the built-in Counter Sales one). */
+export async function loadSampleRepresentativeOptions(search: string, signal: AbortSignal): Promise<Option[]> {
+  const page = await representativeService.list({ search, active: true, size: LOOKUP_SIZE, sort: "name,asc" }, signal);
+  return page.content
+    .filter((r) => !r.builtIn)
+    .map((r) => ({ id: r.id, label: r.name, detail: [r.area, r.phone].filter(Boolean).join(" · ") || undefined }));
+}
+
 /** All representatives including inactive ones (for filters and reports). */
 export async function loadAnyRepresentativeOptions(search: string, signal: AbortSignal): Promise<Option[]> {
   const page = await representativeService.list({ search, size: LOOKUP_SIZE, sort: "name,asc" }, signal);

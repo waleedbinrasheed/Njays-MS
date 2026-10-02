@@ -28,10 +28,14 @@ interface InvoiceLayoutProps {
   lines: InvoiceLineView[];
   totals: { subtotal: number; discountTotal: number; invoiceDiscount: number; taxTotal: number; total: number };
   footer?: ReactNode;
+  /** Shown prominently under the header (e.g. "SAMPLE SALE — Not Retail Sale"). */
+  banner?: ReactNode;
+  /** Quantity x price only: no discount/tax columns, and only the total underneath. */
+  simple?: boolean;
 }
 
 /** Printable document body shared by purchase and sales invoices (A4 friendly via print styles). */
-export function InvoiceLayout({ heading, number, cancelled, party, meta, priceLabel, lines, totals, footer }: InvoiceLayoutProps) {
+export function InvoiceLayout({ heading, number, cancelled, party, meta, priceLabel, lines, totals, footer, banner, simple = false }: InvoiceLayoutProps) {
   const business = useApiQuery((signal) => settingsService.business(signal), []);
   const b = business.data;
 
@@ -57,6 +61,8 @@ export function InvoiceLayout({ heading, number, cancelled, party, meta, priceLa
         </div>
       </header>
 
+      {banner && <div className="mt-4">{banner}</div>}
+
       <section className="grid gap-4 py-5 text-sm sm:grid-cols-2">
         <div>{party}</div>
         <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 sm:justify-self-end">
@@ -76,8 +82,12 @@ export function InvoiceLayout({ heading, number, cancelled, party, meta, priceLa
             <th className="py-2 pr-2 font-medium">Item</th>
             <th className="py-2 pr-2 text-right font-medium">Qty</th>
             <th className="py-2 pr-2 text-right font-medium">{priceLabel}</th>
-            <th className="py-2 pr-2 text-right font-medium">Disc %</th>
-            <th className="py-2 pr-2 text-right font-medium">Tax %</th>
+            {!simple && (
+              <>
+                <th className="py-2 pr-2 text-right font-medium">Disc %</th>
+                <th className="py-2 pr-2 text-right font-medium">Tax %</th>
+              </>
+            )}
             <th className="py-2 text-right font-medium">Amount</th>
           </tr>
         </thead>
@@ -91,8 +101,12 @@ export function InvoiceLayout({ heading, number, cancelled, party, meta, priceLa
               </td>
               <td className="py-2 pr-2 text-right tabular-nums">{l.quantity}</td>
               <td className="whitespace-nowrap py-2 pr-2 text-right tabular-nums">{formatCurrency(l.unitPrice)}</td>
-              <td className="py-2 pr-2 text-right tabular-nums">{Number(l.discountPercent) ? l.discountPercent : "-"}</td>
-              <td className="py-2 pr-2 text-right tabular-nums">{Number(l.taxPercent) ? l.taxPercent : "-"}</td>
+              {!simple && (
+                <>
+                  <td className="py-2 pr-2 text-right tabular-nums">{Number(l.discountPercent) ? l.discountPercent : "-"}</td>
+                  <td className="py-2 pr-2 text-right tabular-nums">{Number(l.taxPercent) ? l.taxPercent : "-"}</td>
+                </>
+              )}
               <td className="whitespace-nowrap py-2 text-right tabular-nums">{formatCurrency(l.lineTotal)}</td>
             </tr>
           ))}
@@ -101,18 +115,22 @@ export function InvoiceLayout({ heading, number, cancelled, party, meta, priceLa
 
       <section className="mt-4 flex justify-end border-t border-slate-300 pt-3">
         <dl className="grid w-full max-w-xs grid-cols-2 gap-y-1 text-sm">
-          <dt className="text-slate-600">Subtotal</dt>
-          <dd className="text-right tabular-nums">{formatCurrency(totals.subtotal)}</dd>
-          <dt className="text-slate-600">Discounts</dt>
-          <dd className="text-right tabular-nums">− {formatCurrency(totals.discountTotal)}</dd>
-          {Number(totals.invoiceDiscount) > 0 && (
+          {!simple && (
             <>
-              <dt className="pl-3 text-xs text-slate-500">incl. invoice discount</dt>
-              <dd className="text-right text-xs tabular-nums text-slate-500">{formatCurrency(totals.invoiceDiscount)}</dd>
+              <dt className="text-slate-600">Subtotal</dt>
+              <dd className="text-right tabular-nums">{formatCurrency(totals.subtotal)}</dd>
+              <dt className="text-slate-600">Discounts</dt>
+              <dd className="text-right tabular-nums">− {formatCurrency(totals.discountTotal)}</dd>
+              {Number(totals.invoiceDiscount) > 0 && (
+                <>
+                  <dt className="pl-3 text-xs text-slate-500">incl. invoice discount</dt>
+                  <dd className="text-right text-xs tabular-nums text-slate-500">{formatCurrency(totals.invoiceDiscount)}</dd>
+                </>
+              )}
+              <dt className="text-slate-600">Tax</dt>
+              <dd className="text-right tabular-nums">+ {formatCurrency(totals.taxTotal)}</dd>
             </>
           )}
-          <dt className="text-slate-600">Tax</dt>
-          <dd className="text-right tabular-nums">+ {formatCurrency(totals.taxTotal)}</dd>
           <dt className="mt-2 border-t border-slate-300 pt-2 text-base font-semibold text-slate-900">Total</dt>
           <dd className="mt-2 border-t border-slate-300 pt-2 text-right text-base font-semibold tabular-nums text-slate-900">
             {formatCurrency(totals.total)}
