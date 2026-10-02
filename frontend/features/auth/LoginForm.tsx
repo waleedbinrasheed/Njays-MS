@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { TextField } from "@/components/ui/FormField";
 import { useAuth } from "@/features/auth/AuthProvider";
-import { ApiError } from "@/services/apiClient";
+import { ApiError, api } from "@/services/apiClient";
 import { safeRedirectPath } from "@/utils/navigation";
 
 export function LoginForm() {
@@ -20,6 +20,29 @@ export function LoginForm() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [slow, setSlow] = useState(false);
+  // "waking" while the server has not answered the warm-up request for a few seconds.
+  const [waking, setWaking] = useState(false);
+
+  // Wake a sleeping server (free hosting) as soon as the page opens, while the user is still typing.
+  useEffect(() => {
+    const controller = new AbortController();
+    let done = false;
+    const timer = setTimeout(() => {
+      if (!done) setWaking(true);
+    }, 2_000);
+    api
+      .get("/health", undefined, controller.signal)
+      .catch(() => undefined)
+      .finally(() => {
+        done = true;
+        clearTimeout(timer);
+        if (!controller.signal.aborted) setWaking(false);
+      });
+    return () => {
+      controller.abort();
+      clearTimeout(timer);
+    };
+  }, []);
 
   // A sign-in that takes this long means the server is waking up (free hosting); say so.
   useEffect(() => {
@@ -68,9 +91,11 @@ export function LoginForm() {
           {error}
         </p>
       )}
-      {slow && !error && (
+      {(slow || waking) && !error && (
         <p role="status" className="rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-800">
-          The server is starting up. This can take up to two minutes after a quiet period; please wait.
+          {submitting
+            ? "Signing in. The server is still waking up after a quiet period; this can take up to three minutes."
+            : "Waking up the server after a quiet period (up to three minutes). You can enter your details meanwhile."}
         </p>
       )}
       <TextField

@@ -61,7 +61,7 @@ export interface RequestOptions {
 /** Hosting proxies answer these while a sleeping server wakes up; the request never reached the app. */
 const STARTING_STATUSES = new Set([502, 503, 504]);
 const STARTING_RETRY_DELAY_MS = 5_000;
-const STARTING_MAX_ATTEMPTS = 24; // about 2 minutes
+const STARTING_MAX_ATTEMPTS = 48; // about 4 minutes
 
 function wait(ms: number, signal?: AbortSignal) {
   return new Promise<void>((resolve, reject) => {
