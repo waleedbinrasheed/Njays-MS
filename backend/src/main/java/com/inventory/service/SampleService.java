@@ -9,6 +9,7 @@ import com.inventory.dto.sample.SampleDtos.SampleLine;
 import com.inventory.dto.sample.SampleDtos.SampleLineRequest;
 import com.inventory.dto.sample.SampleDtos.SampleReturnRef;
 import com.inventory.dto.sample.SampleDtos.SampleSummary;
+import com.inventory.entity.Customer;
 import com.inventory.entity.Product;
 import com.inventory.entity.ReferenceType;
 import com.inventory.entity.Representative;
@@ -21,6 +22,7 @@ import com.inventory.exception.ResourceNotFoundException;
 import com.inventory.mapper.InventoryMapper;
 import com.inventory.mapper.MasterDataMapper;
 import com.inventory.repository.AppUserRepository;
+import com.inventory.repository.CustomerRepository;
 import com.inventory.repository.ProductRepository;
 import com.inventory.repository.RepresentativeRepository;
 import com.inventory.repository.SampleIssueRepository;
@@ -68,6 +70,7 @@ public class SampleService {
     private final SampleIssueRepository samples;
     private final SampleReturnRepository sampleReturns;
     private final RepresentativeRepository representatives;
+    private final CustomerRepository customers;
     private final ProductRepository products;
     private final AppUserRepository users;
     private final InventoryService inventoryService;
@@ -77,12 +80,14 @@ public class SampleService {
     private final ZoneId zone;
 
     public SampleService(SampleIssueRepository samples, SampleReturnRepository sampleReturns,
-                         RepresentativeRepository representatives, ProductRepository products, AppUserRepository users,
+                         RepresentativeRepository representatives, CustomerRepository customers,
+                         ProductRepository products, AppUserRepository users,
                          InventoryService inventoryService, DocumentNumberService numbers, UserDirectory userDirectory,
                          Clock clock, ZoneId businessZone) {
         this.samples = samples;
         this.sampleReturns = sampleReturns;
         this.representatives = representatives;
+        this.customers = customers;
         this.products = products;
         this.users = users;
         this.inventoryService = inventoryService;
@@ -92,8 +97,8 @@ public class SampleService {
         this.zone = businessZone;
     }
 
-    public record SampleFilter(String search, Long representativeId, Long productId, LocalDate from, LocalDate to,
-                               SampleStatus status) {
+    public record SampleFilter(String search, Long representativeId, Long customerId, Long productId, LocalDate from,
+                               LocalDate to, SampleStatus status) {
     }
 
     @Transactional
@@ -102,10 +107,11 @@ public class SampleService {
             throw new BusinessException("Issue date cannot be in the future");
         }
         Representative representative = resolveRepresentative(request.representativeId());
+        Customer customer = resolveCustomer(request.customerId(), representative);
         Map<Long, Product> productsById = loadProducts(request.items());
 
-        SampleIssue sample = new SampleIssue(numbers.next(DocumentType.SAMPLE), representative, request.issueDate(),
-                trimToNull(request.notes()));
+        SampleIssue sample = new SampleIssue(numbers.next(DocumentType.SAMPLE), representative, customer,
+                request.issueDate(), trimToNull(request.notes()));
         for (SampleLineRequest line : request.items()) {
             Product product = productsById.get(line.productId());
             if (line.unitPrice().compareTo(product.getSellingPrice()) > 0) {
@@ -162,12 +168,14 @@ public class SampleService {
             throw new BusinessException("'To' date must not be before 'from' date");
         }
         Specification<SampleIssue> spec = Specification.allOf(
-                Filters.matches(f.search()), Filters.representative(f.representativeId()), Filters.product(f.productId()),
+                Filters.matches(f.search()), Filters.representative(f.representativeId()), Filters.customer(f.customerId()),
+                Filters.product(f.productId()),
                 Filters.dateFrom(f.from()), Filters.dateTo(f.to()), Filters.status(f.status()));
         Page<SampleIssue> page = samples.findAll(spec, pageable);
         Map<Long, Ref> creators = userDirectory.refs(page.getContent().stream().map(SampleIssue::getCreatedBy).toList());
         return PageResponse.of(page, s -> new SampleSummary(s.getId(), s.getSampleNumber(), s.getIssueDate(),
-                MasterDataMapper.ref(s.getRepresentative()), s.getTotalQuantity(), s.getTotal(), s.getReturnedQuantity(),
+                MasterDataMapper.ref(s.getRepresentative()), customerRef(s), s.getTotalQuantity(), s.getTotal(),
+                s.getReturnedQuantity(),
                 s.getReturnedTotal(), s.getOutstandingQuantity(), s.getOutstandingTotal(), s.getStatus(),
                 creators.get(s.getCreatedBy()), s.getCreatedAt()));
     }
@@ -186,10 +194,16 @@ public class SampleService {
                 .map(r -> new SampleReturnRef(r.getId(), r.getReturnNumber(), r.getReturnDate(), r.getTotalQuantity(), r.getTotal()))
                 .toList();
         return new SampleDetail(s.getId(), s.getSampleNumber(), s.getIssueDate(), MasterDataMapper.ref(s.getRepresentative()),
-                s.getRepresentative().getAddress(), s.getTotalQuantity(), s.getTotal(), s.getReturnedQuantity(),
+                s.getRepresentative().getAddress(), customerRef(s), s.getCustomerPhone(), s.getCustomerAddress(),
+                s.getTotalQuantity(), s.getTotal(), s.getReturnedQuantity(),
                 s.getReturnedTotal(), s.getOutstandingQuantity(), s.getOutstandingTotal(), s.getStatus(), s.getNotes(),
                 lines, returns, userDirectory.ref(s.getCreatedBy()), s.getCreatedAt(), s.getCancelledAt(),
                 s.getCancelledBy() == null ? null : InventoryMapper.userRef(s.getCancelledBy()), s.getCancelReason());
+    }
+
+    /** The customer as named on the sample (saved when issued); null when none was chosen. */
+    static Ref customerRef(SampleIssue s) {
+        return s.getCustomer() == null ? null : new Ref(s.getCustomer().getId(), s.getCustomerName());
     }
 
     Map<Long, Returned> returnedPerLine(Long sampleId) {
@@ -212,6 +226,21 @@ public class SampleService {
             throw new BusinessException("Representative '" + representative.getName() + "' is inactive");
         }
         return representative;
+    }
+
+    /** Optional: if given, it must be an active customer of that representative. */
+    private Customer resolveCustomer(Long customerId, Representative representative) {
+        if (customerId == null) return null;
+        Customer customer = customers.findWithRepresentativeById(customerId)
+                .orElseThrow(() -> new BusinessException("Selected customer does not exist"));
+        if (!customer.isActive()) {
+            throw new BusinessException("Customer '" + customer.getName() + "' is inactive");
+        }
+        if (customer.getRepresentative() == null || !customer.getRepresentative().getId().equals(representative.getId())) {
+            throw new BusinessException("Customer '" + customer.getName() + "' is not one of "
+                    + representative.getName() + "'s customers");
+        }
+        return customer;
     }
 
     /** All books must exist, be active, and appear on only one line. */

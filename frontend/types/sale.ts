@@ -51,6 +51,7 @@ export interface SaleSummary {
 }
 
 export interface SaleDetail extends SaleSummary {
+  /** The customer's contact number and address as when the invoice was saved. */
   customerPhone: string | null;
   customerAddress: string | null;
   subtotal: number;

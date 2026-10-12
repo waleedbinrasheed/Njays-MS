@@ -89,7 +89,7 @@ export function NewSampleReturnPage({ sampleId }: { sampleId: number }) {
     <>
       <PageHeader
         title={`Return samples: ${s.sampleNumber}`}
-        description={`Representative: ${s.representative.name} · issued ${formatDate(s.issueDate)}. Returned books go back into stock.`}
+        description={`Representative: ${s.representative.name}${s.customer ? ` (for ${s.customer.name})` : ""} · issued ${formatDate(s.issueDate)}. Returned books go back into stock.`}
       />
       <Link href={`/samples/${sampleId}`} className="mb-4 inline-block text-sm text-slate-600 hover:text-slate-900">
         ← Back to sample

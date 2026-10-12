@@ -10,7 +10,7 @@ import { SortableHeader, nextSort, toSortParam, type SortState } from "@/compone
 import { Spinner } from "@/components/ui/Spinner";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { loadStockedProductOptions } from "@/features/inventory/lookups";
-import { loadAnyRepresentativeOptions } from "@/features/master/lookups";
+import { loadAnyRepresentativeOptions, loadCustomerOptions } from "@/features/master/lookups";
 import { useApiQuery } from "@/hooks/useApiQuery";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { sampleService } from "@/services/sampleService";
@@ -25,6 +25,7 @@ export function SamplesHistoryPage() {
   const { hasPermission } = useAuth();
   const [search, setSearch] = useState("");
   const [representative, setRepresentative] = useState<Option | null>(null);
+  const [customer, setCustomer] = useState<Option | null>(null);
   const [product, setProduct] = useState<Option | null>(null);
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
@@ -42,6 +43,7 @@ export function SamplesHistoryPage() {
             {
               search: debouncedSearch,
               representativeId: representative?.id,
+              customerId: customer?.id,
               productId: product?.id,
               from: from || undefined,
               to: to || undefined,
@@ -52,7 +54,7 @@ export function SamplesHistoryPage() {
             },
             signal,
           ),
-    [debouncedSearch, representative?.id ?? null, product?.id ?? null, from, to, status, page, sort, dateError ?? null],
+    [debouncedSearch, representative?.id ?? null, customer?.id ?? null, product?.id ?? null, from, to, status, page, sort, dateError ?? null],
   );
 
   const reset = <T,>(setter: (v: T) => void) => (v: T) => {
@@ -84,9 +86,10 @@ export function SamplesHistoryPage() {
           <label className="block text-sm font-medium text-slate-700" htmlFor="sample-search">
             Search
           </label>
-          <SearchInput id="sample-search" placeholder="Sample no. or representative" value={search} onChange={(e) => reset(setSearch)(e.target.value)} />
+          <SearchInput id="sample-search" placeholder="Sample no., representative or customer" value={search} onChange={(e) => reset(setSearch)(e.target.value)} />
         </div>
         <AsyncSelect label="Representative" value={representative} onChange={reset(setRepresentative)} load={loadAnyRepresentativeOptions} placeholder="All representatives" />
+        <AsyncSelect label="Customer" value={customer} onChange={reset(setCustomer)} load={loadCustomerOptions} placeholder="All customers" />
         <AsyncSelect label="Book" value={product} onChange={reset(setProduct)} load={loadStockedProductOptions} placeholder="All books" />
         <TextField label="From" type="date" value={from} onChange={(e) => reset(setFrom)(e.target.value)} />
         <TextField label="To" type="date" value={to} onChange={(e) => reset(setTo)(e.target.value)} error={dateError} />
@@ -114,6 +117,7 @@ export function SamplesHistoryPage() {
                 <SortableHeader label="Sample" field="sampleNumber" sort={sort} onSort={onSort} />
                 <SortableHeader label="Date" field="issueDate" sort={sort} onSort={onSort} />
                 <SortableHeader label="Representative" field="representative" sort={sort} onSort={onSort} />
+                <th scope="col" className="px-4 py-2.5 font-medium">Customer</th>
                 <th scope="col" className="px-4 py-2.5 text-right font-medium">Issued qty</th>
                 <SortableHeader label="Issued amount" field="total" sort={sort} onSort={onSort} />
                 <th scope="col" className="px-4 py-2.5 text-right font-medium">Returned</th>
@@ -136,6 +140,7 @@ export function SamplesHistoryPage() {
                       <div>{s.representative.name}</div>
                       {s.representative.area && <div className="text-xs text-slate-500">{s.representative.area}</div>}
                     </td>
+                    <td className="px-4 py-2.5">{s.customer?.name ?? "-"}</td>
                     <td className="px-4 py-2.5 text-right tabular-nums">{s.totalQuantity}</td>
                     <td className={`whitespace-nowrap px-4 py-2.5 text-right tabular-nums ${cancelled ? "line-through" : ""}`}>
                       {formatCurrency(s.total)}

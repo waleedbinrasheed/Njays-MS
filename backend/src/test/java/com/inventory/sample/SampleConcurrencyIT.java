@@ -103,7 +103,7 @@ class SampleConcurrencyIT {
         long repId = representativeService.create(new RepresentativeRequest(TestUsers.uniqueName("SmpRep"), null, null,
                 null, null, true, null)).id();
         LocalDate today = LocalDate.now(businessZone);
-        SampleDetail sample = sampleService.create(new CreateSampleRequest(repId, today, null,
+        SampleDetail sample = sampleService.create(new CreateSampleRequest(repId, null, today, null,
                 List.of(new SampleLineRequest(productId, 5, new BigDecimal("1.00")))));
         long itemId = sample.items().getFirst().id();
 

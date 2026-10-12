@@ -23,8 +23,8 @@ import java.util.List;
 public class SampleReportRepository {
 
     /** Filters shared by both views; the date range is the sample's issue date. */
-    public record SampleReportFilter(Long representativeId, Long productId, LocalDate from, LocalDate to,
-                                     SampleStatus status) {
+    public record SampleReportFilter(Long representativeId, Long customerId, Long productId, LocalDate from,
+                                     LocalDate to, SampleStatus status) {
     }
 
     private static final String FROM = """
@@ -50,6 +50,7 @@ public class SampleReportRepository {
     public static Where where(SampleReportFilter f) {
         return new Where()
                 .add(f.representativeId() != null, "si.representative_id = :repId", "repId", f.representativeId())
+                .add(f.customerId() != null, "si.customer_id = :customerId", "customerId", f.customerId())
                 .add(f.productId() != null, "it.product_id = :productId", "productId", f.productId())
                 .add(f.from() != null, "si.issue_date >= :from", "from", f.from())
                 .add(f.to() != null, "si.issue_date <= :to", "to", f.to())
@@ -61,6 +62,7 @@ public class SampleReportRepository {
     private static final RowMapper<SampleLineRow> LINE = (rs, n) -> new SampleLineRow(
             rs.getLong("sample_id"), rs.getLong("item_id"), rs.getString("sample_number"),
             rs.getObject("issue_date", LocalDate.class), rs.getLong("rep_id"), rs.getString("rep_name"),
+            (Long) rs.getObject("customer_id"), rs.getString("customer_name"),
             rs.getLong("product_id"), rs.getString("title"), rs.getString("isbn"), rs.getInt("quantity"),
             rs.getBigDecimal("unit_price"), rs.getBigDecimal("line_total"), rs.getInt("returned_qty"),
             rs.getBigDecimal("returned_amount"), rs.getInt("outstanding_qty"), rs.getBigDecimal("outstanding_amount"),
@@ -68,7 +70,7 @@ public class SampleReportRepository {
 
     public List<SampleLineRow> lineRows(Where w, Paging page) {
         return jdbc.query("SELECT si.id AS sample_id, it.id AS item_id, si.sample_number, si.issue_date, r.id AS rep_id, "
-                        + "r.name AS rep_name, p.id AS product_id, p.title, p.isbn, it.quantity, it.unit_price, it.line_total, "
+                        + "r.name AS rep_name, si.customer_id, si.customer_name, p.id AS product_id, p.title, p.isbn, it.quantity, it.unit_price, it.line_total, "
                         + RETURNED_QTY + " AS returned_qty, " + RETURNED_AMOUNT + " AS returned_amount, "
                         + OUT_QTY + " AS outstanding_qty, " + OUT_AMOUNT + " AS outstanding_amount, si.status"
                         + FROM + w.sql() + " ORDER BY " + page.orderBy() + " LIMIT :limit OFFSET :offset",

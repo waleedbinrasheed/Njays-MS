@@ -22,10 +22,10 @@ import java.util.Optional;
 public interface SampleIssueRepository extends JpaRepository<SampleIssue, Long>, JpaSpecificationExecutor<SampleIssue> {
 
     @Override
-    @EntityGraph(attributePaths = {"representative"})
+    @EntityGraph(attributePaths = {"representative", "customer"})
     Page<SampleIssue> findAll(Specification<SampleIssue> spec, Pageable pageable);
 
-    @EntityGraph(attributePaths = {"representative", "items", "items.product", "cancelledBy"})
+    @EntityGraph(attributePaths = {"representative", "customer", "items", "items.product", "cancelledBy"})
     @Query("select s from SampleIssue s where s.id = :id")
     Optional<SampleIssue> findDetailedById(@Param("id") Long id);
 
@@ -36,12 +36,14 @@ public interface SampleIssueRepository extends JpaRepository<SampleIssue, Long>,
 
     boolean existsByRepresentativeId(Long representativeId);
 
+    boolean existsByCustomerId(Long customerId);
+
     final class Filters {
 
         private Filters() {
         }
 
-        /** Sample number or representative name/area. */
+        /** Sample number, representative name/area or customer name/phone. */
         public static Specification<SampleIssue> matches(String search) {
             if (search == null || search.isBlank()) return null;
             String term = "%" + search.trim().toLowerCase(Locale.ROOT) + "%";
@@ -50,13 +52,19 @@ public interface SampleIssueRepository extends JpaRepository<SampleIssue, Long>,
                 return cb.or(
                         cb.like(cb.lower(root.get("sampleNumber")), term),
                         cb.like(cb.lower(rep.get("name")), term),
-                        cb.like(cb.lower(cb.coalesce(rep.get("area"), "")), term));
+                        cb.like(cb.lower(cb.coalesce(rep.get("area"), "")), term),
+                        cb.like(cb.lower(cb.coalesce(root.get("customerName"), "")), term),
+                        cb.like(cb.lower(cb.coalesce(root.get("customerPhone"), "")), term));
             };
         }
 
         public static Specification<SampleIssue> representative(Long representativeId) {
             return representativeId == null ? null
                     : (root, q, cb) -> cb.equal(root.get("representative").get("id"), representativeId);
+        }
+
+        public static Specification<SampleIssue> customer(Long customerId) {
+            return customerId == null ? null : (root, q, cb) -> cb.equal(root.get("customer").get("id"), customerId);
         }
 
         public static Specification<SampleIssue> product(Long productId) {

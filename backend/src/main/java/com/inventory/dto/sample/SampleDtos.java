@@ -37,8 +37,10 @@ public final class SampleDtos {
             @Digits(integer = 10, fraction = 2, message = "Sample price must have at most 2 decimals") BigDecimal unitPrice) {
     }
 
+    /** {@code customerId} is optional and must be one of that representative's customers. */
     public record CreateSampleRequest(
             @NotNull(message = "Representative is required") Long representativeId,
+            Long customerId,
             // "Not in the future" is checked in the service using the shop's time zone.
             @NotNull(message = "Issue date is required") LocalDate issueDate,
             @Size(max = 500) String notes,
@@ -65,6 +67,7 @@ public final class SampleDtos {
             String sampleNumber,
             LocalDate issueDate,
             RepresentativeRef representative,
+            Ref customer,
             int totalQuantity,
             BigDecimal total,
             int returnedQuantity,
@@ -86,6 +89,9 @@ public final class SampleDtos {
             LocalDate issueDate,
             RepresentativeRef representative,
             String representativeAddress,
+            Ref customer,
+            String customerPhone,
+            String customerAddress,
             int totalQuantity,
             BigDecimal total,
             int returnedQuantity,
@@ -131,6 +137,7 @@ public final class SampleDtos {
             Long sampleId,
             String sampleNumber,
             Ref representative,
+            Ref customer,
             int totalQuantity,
             BigDecimal total,
             Ref createdBy,
@@ -145,6 +152,7 @@ public final class SampleDtos {
             String sampleNumber,
             LocalDate issueDate,
             RepresentativeRef representative,
+            Ref customer,
             int totalQuantity,
             BigDecimal total,
             String notes,
@@ -163,6 +171,8 @@ public final class SampleDtos {
             LocalDate issueDate,
             Long representativeId,
             String representative,
+            Long customerId,
+            String customer,
             Long productId,
             String title,
             String isbn,

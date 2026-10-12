@@ -16,7 +16,7 @@ export interface InvoiceLineView {
   lineTotal: number;
 }
 
-interface InvoiceLayoutProps {
+export interface InvoiceLayoutProps {
   heading: string;
   number: string;
   cancelled: boolean;

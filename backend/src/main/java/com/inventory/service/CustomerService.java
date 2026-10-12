@@ -11,6 +11,7 @@ import com.inventory.entity.Representative;
 import com.inventory.repository.CustomerRepository;
 import com.inventory.repository.RepresentativeRepository;
 import com.inventory.repository.SaleRepository;
+import com.inventory.repository.SampleIssueRepository;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,11 +27,14 @@ public class CustomerService {
 
     private final CustomerRepository customers;
     private final SaleRepository sales;
+    private final SampleIssueRepository samples;
     private final RepresentativeRepository representatives;
 
-    public CustomerService(CustomerRepository customers, SaleRepository sales, RepresentativeRepository representatives) {
+    public CustomerService(CustomerRepository customers, SaleRepository sales, SampleIssueRepository samples,
+                           RepresentativeRepository representatives) {
         this.customers = customers;
         this.sales = sales;
+        this.samples = samples;
         this.representatives = representatives;
     }
 
@@ -83,7 +87,7 @@ public class CustomerService {
             throw new BusinessException("The walk-in customer cannot be deleted");
         }
         String label = "Customer '" + customer.getName() + "'";
-        if (sales.existsByCustomerId(id)) {
+        if (sales.existsByCustomerId(id) || samples.existsByCustomerId(id)) {
             throw inUse(label);
         }
         deleteIfUnused(customers, customer, label);

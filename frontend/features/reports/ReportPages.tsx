@@ -606,6 +606,7 @@ export function SampleReportPage() {
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [representative, setRepresentative] = useState<Option | null>(null);
+  const [customer, setCustomer] = useState<Option | null>(null);
   const [product, setProduct] = useState<Option | null>(null);
   const [status, setStatus] = useState<SampleStatus | "">("");
 
@@ -614,6 +615,7 @@ export function SampleReportPage() {
       from: from || undefined,
       to: to || undefined,
       representativeId: representative?.id,
+      customerId: customer?.id,
       productId: product?.id,
       status: status || undefined,
     },
@@ -626,6 +628,7 @@ export function SampleReportPage() {
         </SelectField>
         <DateRange from={from} to={to} setFrom={setFrom} setTo={setTo} />
         <AsyncSelect label="Representative" value={representative} onChange={setRepresentative} load={loadAnyRepresentativeOptions} placeholder="All representatives" />
+        <AsyncSelect label="Customer" value={customer} onChange={setCustomer} load={loadCustomerOptions} placeholder="All customers" />
         <AsyncSelect label="Book" value={product} onChange={setProduct} load={loadStockedProductOptions} placeholder="All books" />
         <SelectField label="Status" value={status} onChange={(e) => setStatus(e.target.value as SampleStatus | "")}>
           <option value="">All</option>
@@ -642,6 +645,7 @@ export function SampleReportPage() {
       ["Issued from", from],
       ["Issued to", to],
       ["Representative", representative?.label],
+      ["Customer", customer?.label],
       ["Book", product?.label],
       ["Status", status ? SAMPLE_STATUS_LABELS[status] : null],
     ]),

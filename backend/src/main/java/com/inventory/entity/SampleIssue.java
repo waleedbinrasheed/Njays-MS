@@ -34,6 +34,21 @@ public class SampleIssue extends AuditableEntity {
     @JoinColumn(name = "representative_id", nullable = false, updatable = false)
     private Representative representative;
 
+    /** Optional: which of the representative's customers (e.g. a school) the samples are for. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "customer_id", updatable = false)
+    private Customer customer;
+
+    /** The customer's details as they were when the sample was issued (printed on the invoice). */
+    @Column(name = "customer_name", length = 150, updatable = false)
+    private String customerName;
+
+    @Column(name = "customer_phone", length = 30, updatable = false)
+    private String customerPhone;
+
+    @Column(name = "customer_address", length = 500, updatable = false)
+    private String customerAddress;
+
     @Column(name = "issue_date", nullable = false, updatable = false)
     private LocalDate issueDate;
 
@@ -73,9 +88,16 @@ public class SampleIssue extends AuditableEntity {
     protected SampleIssue() {
     }
 
-    public SampleIssue(String sampleNumber, Representative representative, LocalDate issueDate, String notes) {
+    public SampleIssue(String sampleNumber, Representative representative, Customer customer, LocalDate issueDate,
+                       String notes) {
         this.sampleNumber = sampleNumber;
         this.representative = representative;
+        this.customer = customer;
+        if (customer != null) {
+            this.customerName = customer.getName();
+            this.customerPhone = customer.getPhone();
+            this.customerAddress = customer.getAddress();
+        }
         this.issueDate = issueDate;
         this.notes = notes;
     }
@@ -111,6 +133,23 @@ public class SampleIssue extends AuditableEntity {
 
     public Representative getRepresentative() {
         return representative;
+    }
+
+    /** May be null (the customer is optional). */
+    public Customer getCustomer() {
+        return customer;
+    }
+
+    public String getCustomerName() {
+        return customerName;
+    }
+
+    public String getCustomerPhone() {
+        return customerPhone;
+    }
+
+    public String getCustomerAddress() {
+        return customerAddress;
     }
 
     public LocalDate getIssueDate() {

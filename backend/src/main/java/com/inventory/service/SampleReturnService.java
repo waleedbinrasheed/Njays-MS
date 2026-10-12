@@ -147,7 +147,8 @@ public class SampleReturnService {
         return PageResponse.of(page, r -> {
             SampleIssue s = r.getSampleIssue();
             return new SampleReturnSummary(r.getId(), r.getReturnNumber(), r.getReturnDate(), s.getId(), s.getSampleNumber(),
-                    new Ref(s.getRepresentative().getId(), s.getRepresentative().getName()), r.getTotalQuantity(),
+                    new Ref(s.getRepresentative().getId(), s.getRepresentative().getName()), SampleService.customerRef(s),
+                    r.getTotalQuantity(),
                     r.getTotal(), creators.get(r.getCreatedBy()), r.getCreatedAt());
         });
     }
@@ -159,7 +160,8 @@ public class SampleReturnService {
                         i.getQuantity(), i.getUnitPrice(), i.getLineTotal()))
                 .toList();
         return new SampleReturnDetail(r.getId(), r.getReturnNumber(), r.getReturnDate(), s.getId(), s.getSampleNumber(),
-                s.getIssueDate(), MasterDataMapper.ref(s.getRepresentative()), r.getTotalQuantity(), r.getTotal(),
+                s.getIssueDate(), MasterDataMapper.ref(s.getRepresentative()), SampleService.customerRef(s),
+                r.getTotalQuantity(), r.getTotal(),
                 r.getNotes(), lines, userDirectory.ref(r.getCreatedBy()), r.getCreatedAt());
     }
 }

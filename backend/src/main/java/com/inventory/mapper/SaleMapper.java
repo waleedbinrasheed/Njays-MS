@@ -25,8 +25,8 @@ public final class SaleMapper {
                 s.getSaleDate(),
                 MasterDataMapper.ref(s.getRepresentative()),
                 customerRef(s),
-                s.getCustomer() == null ? null : s.getCustomer().getPhone(),
-                s.getCustomer() == null ? null : s.getCustomer().getAddress(),
+                s.getCustomerPhone(),
+                s.getCustomerAddress(),
                 s.getSubtotal(),
                 s.getInvoiceDiscount(),
                 s.getDiscountTotal(),
@@ -44,8 +44,11 @@ public final class SaleMapper {
                 s.getVersion());
     }
 
+    /** Named as on the invoice (the saved name), falling back to the customer record. */
     private static Ref customerRef(Sale s) {
-        return s.getCustomer() == null ? null : new Ref(s.getCustomer().getId(), s.getCustomer().getName());
+        if (s.getCustomer() == null) return null;
+        String name = s.getCustomerName() != null ? s.getCustomerName() : s.getCustomer().getName();
+        return new Ref(s.getCustomer().getId(), name);
     }
 
     private static SaleLine toLine(SaleItem i) {

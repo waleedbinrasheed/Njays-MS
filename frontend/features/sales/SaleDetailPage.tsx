@@ -8,7 +8,9 @@ import { PageSpinner } from "@/components/ui/Spinner";
 import { useToast } from "@/components/ui/Toast";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { CancelDocumentDialog } from "@/features/documents/CancelDocumentDialog";
-import { InvoiceLayout } from "@/features/documents/InvoiceLayout";
+import { CustomerBlock } from "@/features/documents/CustomerBlock";
+import { InvoiceLayout, type InvoiceLayoutProps } from "@/features/documents/InvoiceLayout";
+import { TwoCopyPrint, printTwoCopies } from "@/features/documents/TwoCopyPrint";
 import { DocumentReturnsList, useDocumentReturns } from "@/features/returns/DocumentReturns";
 import { PaymentStatusBadge } from "@/features/documents/StatusBadges";
 import { useApiQuery } from "@/hooks/useApiQuery";
@@ -47,6 +49,52 @@ export function SaleDetailPage({ id }: { id: number }) {
     }
   }
 
+  const invoice: InvoiceLayoutProps = {
+    heading: "Sales invoice",
+    number: s.invoiceNumber,
+    cancelled,
+    party: s.representative ? (
+      <>
+        <p className="text-xs uppercase tracking-wide text-slate-500">Bill to (representative)</p>
+        <p className="font-medium text-slate-900">{s.representative.name}</p>
+        {(s.representative.area || s.representative.phone) && (
+          <p className="text-slate-600">{[s.representative.area, s.representative.phone].filter(Boolean).join(" · ")}</p>
+        )}
+        {s.customer && <CustomerBlock name={s.customer.name} phone={s.customerPhone} address={s.customerAddress} />}
+      </>
+    ) : (
+      <>
+        <p className="text-xs uppercase tracking-wide text-slate-500">Bill to</p>
+        <p className="font-medium text-slate-900">{s.customer?.name ?? "-"}</p>
+        {s.customerPhone && <p className="text-slate-600">{s.customerPhone}</p>}
+        {s.customerAddress && <p className="whitespace-pre-line text-slate-600">{s.customerAddress}</p>}
+      </>
+    ),
+    meta: [
+      { label: "Date", value: formatDate(s.saleDate) },
+      { label: "Payment", value: <PaymentStatusBadge status={s.paymentStatus} /> },
+      { label: "Served by", value: s.createdBy?.name ?? "-" },
+    ],
+    priceLabel: "Unit price",
+    lines: s.items.map((i) => ({
+      key: i.id,
+      title: i.product.title,
+      isbn: i.product.isbn,
+      quantity: i.quantity,
+      unitPrice: i.unitPrice,
+      discountPercent: i.discountPercent,
+      taxPercent: i.taxPercent,
+      lineTotal: i.lineTotal,
+    })),
+    totals: s,
+    footer: (
+      <>
+        {s.notes && <p className="mb-2 whitespace-pre-line">Notes: {s.notes}</p>}
+        <p className="text-center text-xs text-slate-500">Thank you for your purchase.</p>
+      </>
+    ),
+  };
+
   return (
     <>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2 print:hidden">
@@ -71,8 +119,9 @@ export function SaleDetailPage({ id }: { id: number }) {
               </select>
             </label>
           )}
+          <Button onClick={printTwoCopies}>Print 2 copies</Button>
           <Button variant="secondary" onClick={() => window.print()}>
-            Print / Save as PDF
+            Print single
           </Button>
           {hasPermission("RETURN_CREATE") && !cancelled && (
             <Link
@@ -88,7 +137,7 @@ export function SaleDetailPage({ id }: { id: number }) {
             </Button>
           )}
           {hasPermission("SALE_CREATE") && (
-            <Link href="/sales/new" className="inline-flex h-9 items-center rounded-md bg-blue-600 px-4 text-sm font-medium text-white hover:bg-blue-700">
+            <Link href="/sales/new" className="inline-flex h-9 items-center rounded-md border border-slate-300 bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50">
               New sale
             </Link>
           )}
@@ -101,60 +150,11 @@ export function SaleDetailPage({ id }: { id: number }) {
         </div>
       )}
 
-      <InvoiceLayout
-        heading="Sales invoice"
-        number={s.invoiceNumber}
-        cancelled={cancelled}
-        party={
-          s.representative ? (
-            <>
-              <p className="text-xs uppercase tracking-wide text-slate-500">Bill to (representative)</p>
-              <p className="font-medium text-slate-900">{s.representative.name}</p>
-              {(s.representative.area || s.representative.phone) && (
-                <p className="text-slate-600">{[s.representative.area, s.representative.phone].filter(Boolean).join(" · ")}</p>
-              )}
-              {s.customer && (
-                <p className="mt-2 text-slate-600">
-                  For customer: <span className="font-medium text-slate-900">{s.customer.name}</span>
-                  {s.customerPhone ? ` · ${s.customerPhone}` : ""}
-                </p>
-              )}
-            </>
-          ) : (
-            <>
-              <p className="text-xs uppercase tracking-wide text-slate-500">Bill to</p>
-              <p className="font-medium text-slate-900">{s.customer?.name ?? "-"}</p>
-              {s.customerPhone && <p className="text-slate-600">{s.customerPhone}</p>}
-              {s.customerAddress && <p className="whitespace-pre-line text-slate-600">{s.customerAddress}</p>}
-            </>
-          )
-        }
-        meta={[
-          { label: "Date", value: formatDate(s.saleDate) },
-          { label: "Payment", value: <PaymentStatusBadge status={s.paymentStatus} /> },
-          { label: "Served by", value: s.createdBy?.name ?? "-" },
-        ]}
-        priceLabel="Unit price"
-        lines={s.items.map((i) => ({
-          key: i.id,
-          title: i.product.title,
-          isbn: i.product.isbn,
-          quantity: i.quantity,
-          unitPrice: i.unitPrice,
-          discountPercent: i.discountPercent,
-          taxPercent: i.taxPercent,
-          lineTotal: i.lineTotal,
-        }))}
-        totals={s}
-        footer={
-          <>
-            {s.notes && <p className="mb-2 whitespace-pre-line">Notes: {s.notes}</p>}
-            <p className="text-center text-xs text-slate-500">Thank you for your purchase.</p>
-          </>
-        }
-      />
-
-      <DocumentReturnsList kind="sale" returns={returnList} />
+      <div className="print-single">
+        <InvoiceLayout {...invoice} />
+        <DocumentReturnsList kind="sale" returns={returnList} />
+      </div>
+      <TwoCopyPrint {...invoice} />
 
       {cancelling && (
         <CancelDocumentDialog

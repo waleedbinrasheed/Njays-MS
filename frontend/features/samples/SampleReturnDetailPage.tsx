@@ -49,6 +49,11 @@ export function SampleReturnDetailPage({ id }: { id: number }) {
             {(r.representative.area || r.representative.phone) && (
               <p className="text-slate-600">{[r.representative.area, r.representative.phone].filter(Boolean).join(" · ")}</p>
             )}
+            {r.customer && (
+              <p className="mt-2 text-slate-600">
+                For customer: <span className="font-medium text-slate-900">{r.customer.name}</span>
+              </p>
+            )}
           </>
         }
         meta={[

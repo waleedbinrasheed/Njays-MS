@@ -18,10 +18,11 @@ import java.util.Optional;
 public interface SampleReturnRepository extends JpaRepository<SampleReturn, Long>, JpaSpecificationExecutor<SampleReturn> {
 
     @Override
-    @EntityGraph(attributePaths = {"sampleIssue", "sampleIssue.representative"})
+    @EntityGraph(attributePaths = {"sampleIssue", "sampleIssue.representative", "sampleIssue.customer"})
     Page<SampleReturn> findAll(Specification<SampleReturn> spec, Pageable pageable);
 
-    @EntityGraph(attributePaths = {"sampleIssue", "sampleIssue.representative", "items", "items.product"})
+    @EntityGraph(attributePaths = {"sampleIssue", "sampleIssue.representative", "sampleIssue.customer", "items",
+            "items.product"})
     @Query("select r from SampleReturn r where r.id = :id")
     Optional<SampleReturn> findDetailedById(@Param("id") Long id);
 

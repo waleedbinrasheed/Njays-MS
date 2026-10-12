@@ -345,7 +345,92 @@ class SampleIT extends ApiTestBase {
                 .andExpect(status().isBadRequest());
     }
 
+    @Test
+    void sampleCanBeForOneOfTheRepresentativesCustomersAndKeepsTheirDetails() throws Exception {
+        long rep = representative("School rep");
+        long otherRep = representative("Other rep");
+        long school = customer("XYZ School", rep, "042-1234567", "Street 4, Model Town");
+        long otherSchool = customer("Other School", otherRep, null, null);
+        long book = book("School book", "100", "150", 10);
+
+        JsonNode sample = read(mvc.perform(withJson(post("/api/samples"), Map.of("representativeId", rep, "customerId", school,
+                        "issueDate", today.toString(), "items", List.of(line(book, 2, "100")))).session(admin))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.customer.id").value(school))
+                .andExpect(jsonPath("$.customer.name").value(nameOfCustomer(school)))
+                .andExpect(jsonPath("$.customerPhone").value("042-1234567"))
+                .andExpect(jsonPath("$.customerAddress").value("Street 4, Model Town"))
+                .andReturn());
+        long sampleId = sample.get("id").asLong();
+
+        // Later edits to the customer do not change the issued sample.
+        rawUpdate("update customer set phone = '0300-0000000', address = 'Moved' where id = ?", school);
+        mvc.perform(get("/api/samples/" + sampleId).session(admin))
+                .andExpect(jsonPath("$.customerPhone").value("042-1234567"))
+                .andExpect(jsonPath("$.customerAddress").value("Street 4, Model Town"));
+
+        mvc.perform(withJson(post("/api/samples"), Map.of("representativeId", rep, "customerId", otherSchool,
+                        "issueDate", today.toString(), "items", List.of(line(book, 1, "100")))).session(admin))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message", containsString("is not one of")));
+        rawUpdate("update customer set active = false where id = ?", school);
+        mvc.perform(withJson(post("/api/samples"), Map.of("representativeId", rep, "customerId", school,
+                        "issueDate", today.toString(), "items", List.of(line(book, 1, "100")))).session(admin))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message", containsString("is inactive")));
+
+        // Without a customer is still fine.
+        issue(rep, today, line(book, 1, "100")).andExpect(status().isCreated()).andExpect(jsonPath("$.customer").doesNotExist());
+
+        mvc.perform(get("/api/samples").param("customerId", String.valueOf(school)).session(admin))
+                .andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.content[0].customer.id").value(school));
+        mvc.perform(get("/api/samples").param("search", "1234567").session(admin))
+                .andExpect(jsonPath("$.totalElements").value(1));
+        mvc.perform(get("/api/sample-reports/lines").param("customerId", String.valueOf(school)).session(admin))
+                .andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.content[0].customer").value(nameOfCustomer(school)));
+        sampleReturn(sampleId, sample.get("items").get(0).get("id").asLong(), 1)
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.customer.id").value(school));
+
+        mvc.perform(delete("/api/customers/" + school).with(org.springframework.security.test.web.servlet.request
+                        .SecurityMockMvcRequestPostProcessors.csrf()).session(admin))
+                .andExpect(status().isConflict());
+    }
+
+    @Test
+    void salesInvoiceKeepsTheCustomerDetailsItWasSavedWith() throws Exception {
+        long rep = representative("Sale rep");
+        long school = customer("ABC School", rep, "051-7654321", "Blue Area");
+        long book = book("Sold book", "100", "150", 5);
+
+        JsonNode sale = read(mvc.perform(withJson(post("/api/sales"), Map.of("representativeId", rep, "customerId", school,
+                        "saleDate", today.toString(), "paymentStatus", "PAID",
+                        "items", List.of(Map.of("productId", book, "quantity", 1, "unitPrice", "150")))).session(admin))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.customerPhone").value("051-7654321"))
+                .andExpect(jsonPath("$.customerAddress").value("Blue Area"))
+                .andReturn());
+
+        rawUpdate("update customer set phone = null, address = 'Somewhere else' where id = ?", school);
+        mvc.perform(get("/api/sales/" + sale.get("id").asLong()).session(admin))
+                .andExpect(jsonPath("$.customerPhone").value("051-7654321"))
+                .andExpect(jsonPath("$.customerAddress").value("Blue Area"));
+    }
+
     // ------------------------------------------------------------------ helpers
+
+    private long customer(String prefix, long rep, String phone, String address) throws Exception {
+        Map<String, Object> body = new java.util.HashMap<>(Map.of("name", TestUsers.uniqueName(prefix), "representativeId", rep));
+        if (phone != null) body.put("phone", phone);
+        if (address != null) body.put("address", address);
+        return create("/api/customers", body);
+    }
+
+    private String nameOfCustomer(long id) {
+        return jdbc.queryForObject("select name from customer where id = ?", String.class, id);
+    }
 
     private static Map<String, Object> line(long productId, int qty, String price) {
         return Map.of("productId", productId, "quantity", qty, "unitPrice", price);

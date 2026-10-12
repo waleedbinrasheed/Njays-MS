@@ -26,6 +26,7 @@ export function sampleLineColumns(showRepresentative: boolean): ReportColumn<Sam
     ...(showRepresentative
       ? [{ header: "Representative", sortField: "representative", render: (row: SampleLineRow) => row.representative }]
       : []),
+    { header: "Customer", sortField: "customer", render: (row) => row.customer ?? "-" },
     {
       header: "Book",
       sortField: "product",

@@ -17,6 +17,7 @@ import type {
 export interface SampleQuery extends PageQuery {
   search?: string;
   representativeId?: number;
+  customerId?: number;
   productId?: number;
   from?: string;
   to?: string;

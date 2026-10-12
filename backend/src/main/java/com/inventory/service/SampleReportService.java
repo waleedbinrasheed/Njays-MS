@@ -24,7 +24,7 @@ public class SampleReportService {
     private static final Map<String, String> LINE_SORT = Map.of(
             "date", "si.issue_date", "number", "si.sample_number", "representative", "r.name", "product", "p.title",
             "issuedQuantity", "it.quantity", "issuedAmount", "it.line_total", "outstandingQuantity", "outstanding_qty",
-            "outstandingAmount", "outstanding_amount", "status", "si.status");
+            "outstandingAmount", "outstanding_amount", "status", "si.status", "customer", "si.customer_name");
     private static final Map<String, String> REPRESENTATIVE_SORT = Map.of(
             "name", "name", "area", "area", "samples", "samples", "issuedAmount", "issued_amount",
             "returnedAmount", "returned_amount", "outstandingQuantity", "outstanding_qty",

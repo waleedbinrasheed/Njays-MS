@@ -13,6 +13,8 @@ export interface SampleLineInput {
 
 export interface CreateSampleInput {
   representativeId: number;
+  /** Optional: one of that representative's customers (e.g. a school). */
+  customerId: number | null;
   issueDate: string;
   notes: string;
   items: SampleLineInput[];
@@ -36,6 +38,8 @@ export interface SampleSummary {
   sampleNumber: string;
   issueDate: string;
   representative: RepresentativeRef;
+  /** Optional; named as when the sample was issued. */
+  customer: Ref | null;
   totalQuantity: number;
   total: number;
   returnedQuantity: number;
@@ -57,6 +61,9 @@ export interface SampleReturnRef {
 
 export interface SampleDetail extends SampleSummary {
   representativeAddress: string | null;
+  /** The customer's contact number and address as when the sample was issued. */
+  customerPhone: string | null;
+  customerAddress: string | null;
   notes: string | null;
   items: SampleLine[];
   returns: SampleReturnRef[];
@@ -88,6 +95,7 @@ export interface SampleReturnSummary {
   sampleId: number;
   sampleNumber: string;
   representative: Ref;
+  customer: Ref | null;
   totalQuantity: number;
   total: number;
   createdBy: Ref | null;
@@ -102,6 +110,7 @@ export interface SampleReturnDetail {
   sampleNumber: string;
   issueDate: string;
   representative: RepresentativeRef;
+  customer: Ref | null;
   totalQuantity: number;
   total: number;
   notes: string | null;
@@ -118,6 +127,8 @@ export interface SampleLineRow {
   issueDate: string;
   representativeId: number;
   representative: string;
+  customerId: number | null;
+  customer: string | null;
   productId: number;
   title: string;
   isbn: string | null;

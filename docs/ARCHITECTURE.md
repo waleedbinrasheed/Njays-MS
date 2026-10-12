@@ -119,6 +119,11 @@ one company-wide inventory, one stock location.
   invoices, representative sample history and the Sample report; `SAMPLE_MANAGE` (ADMIN) to issue, return and
   cancel. The Sample report shows issued/returned/outstanding per representative or per issued book
   (filters: representative, book, issue date range, status); cancelled samples are listed but not counted.
+- **Customer on samples & invoice printing (client change, V12):** a sample may name one of its
+  representative's active customers (optional, like sales). Sales and samples save the customer's name,
+  phone (the "school number") and address when saved, so printed invoices never change later. Sales and
+  sample invoices print two copies on one A4 page (office copy / representative copy, dashed cut line);
+  the copies are measured off-screen first and fall back to one copy per page when they do not fit half a page.
 - **Returns:** separate numbered documents (`SRT-…` sales returns, `PRT-…` purchase returns), each line
   linked to the original invoice/purchase line. The original document row is locked while a return is
   recorded, so concurrent returns can never exceed the quantity on it (`ReturnConcurrencyIT`). Amount per

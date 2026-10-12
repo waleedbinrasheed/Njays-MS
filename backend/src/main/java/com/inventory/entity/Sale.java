@@ -39,6 +39,16 @@ public class Sale extends AuditableEntity {
     @JoinColumn(name = "customer_id", updatable = false)
     private Customer customer;
 
+    /** The customer's details as they were when the invoice was saved (printed on the invoice). */
+    @Column(name = "customer_name", length = 150, updatable = false)
+    private String customerName;
+
+    @Column(name = "customer_phone", length = 30, updatable = false)
+    private String customerPhone;
+
+    @Column(name = "customer_address", length = 500, updatable = false)
+    private String customerAddress;
+
     @Column(name = "sale_date", nullable = false, updatable = false)
     private LocalDate saleDate;
 
@@ -90,6 +100,11 @@ public class Sale extends AuditableEntity {
         this.invoiceNumber = invoiceNumber;
         this.representative = representative;
         this.customer = customer;
+        if (customer != null) {
+            this.customerName = customer.getName();
+            this.customerPhone = customer.getPhone();
+            this.customerAddress = customer.getAddress();
+        }
         this.saleDate = saleDate;
         this.paymentStatus = paymentStatus;
         this.notes = notes;
@@ -135,6 +150,18 @@ public class Sale extends AuditableEntity {
     /** May be null for new sales (the customer is optional). */
     public Customer getCustomer() {
         return customer;
+    }
+
+    public String getCustomerName() {
+        return customerName;
+    }
+
+    public String getCustomerPhone() {
+        return customerPhone;
+    }
+
+    public String getCustomerAddress() {
+        return customerAddress;
     }
 
     public LocalDate getSaleDate() {

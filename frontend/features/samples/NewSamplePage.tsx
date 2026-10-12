@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useMemo, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { AsyncSelect, type Option } from "@/components/ui/AsyncSelect";
 import { Button } from "@/components/ui/Button";
@@ -9,7 +9,7 @@ import { PageHeader } from "@/components/ui/Feedback";
 import { TextAreaField, TextField } from "@/components/ui/FormField";
 import { useToast } from "@/components/ui/Toast";
 import { LineItemsEditor, num, type DraftLine } from "@/features/documents/LineItemsEditor";
-import { loadSampleRepresentativeOptions } from "@/features/master/lookups";
+import { loadSampleRepresentativeOptions, representativeCustomerLoader } from "@/features/master/lookups";
 import { useUnsavedChangesWarning } from "@/hooks/useUnsavedChangesWarning";
 import { ApiError } from "@/services/apiClient";
 import { sampleService } from "@/services/sampleService";
@@ -22,6 +22,7 @@ export function NewSamplePage() {
   const router = useRouter();
   const toast = useToast();
   const [representative, setRepresentative] = useState<Option | null>(null);
+  const [customer, setCustomer] = useState<Option | null>(null);
   const [date, setDate] = useState(todayIso());
   const [notes, setNotes] = useState("");
   const [lines, setLines] = useState<DraftLine[]>([]);
@@ -31,6 +32,18 @@ export function NewSamplePage() {
   const [saving, setSaving] = useState(false);
 
   useUnsavedChangesWarning(lines.length > 0 && !saving);
+
+  const representativeId = representative?.id ?? null;
+  const customerLoader = useMemo(
+    () => (representativeId ? representativeCustomerLoader(representativeId) : null),
+    [representativeId],
+  );
+
+  function changeRepresentative(o: Option | null) {
+    setRepresentative(o);
+    // A customer belongs to one representative; a new representative means choosing again.
+    setCustomer(null);
+  }
 
   const total = lines.reduce((sum, l) => sum + lineAmount(l), 0);
   const units = lines.reduce((n, l) => n + num(l.quantity), 0);
@@ -59,6 +72,7 @@ export function NewSamplePage() {
     try {
       const saved = await sampleService.create({
         representativeId: representative.id,
+        customerId: customer?.id ?? null,
         issueDate: date,
         notes,
         items: lines.map((l) => ({ productId: l.productId, quantity: num(l.quantity), unitPrice: num(l.unitPrice) })),
@@ -88,17 +102,29 @@ export function NewSamplePage() {
         )}
 
         <section className="grid gap-4 rounded-lg border border-slate-200 bg-white p-4 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="sm:col-span-2">
+          <div>
             <AsyncSelect
               label="Representative"
               value={representative}
-              onChange={setRepresentative}
+              onChange={changeRepresentative}
               load={loadSampleRepresentativeOptions}
               error={errors.representative}
               placeholder="Search representatives"
               required
             />
           </div>
+          {customerLoader ? (
+            <AsyncSelect
+              key={representative?.id}
+              label="For customer (optional)"
+              value={customer}
+              onChange={setCustomer}
+              load={customerLoader}
+              placeholder={`Any of ${representative?.label}'s customers`}
+            />
+          ) : (
+            <div />
+          )}
           <TextField label="Issue date" type="date" max={todayIso()} value={date} onChange={(e) => setDate(e.target.value)} error={errors.date} required />
         </section>
 
@@ -150,7 +176,8 @@ export function NewSamplePage() {
         message={
           <div className="space-y-1">
             <p>
-              To <strong>{representative?.label}</strong> · {date}
+              To <strong>{representative?.label}</strong>
+              {customer ? <> for {customer.label}</> : null} · {date}
             </p>
             <p>
               {lines.length} book(s), {units} unit(s) will be taken from stock.

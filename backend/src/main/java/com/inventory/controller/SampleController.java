@@ -60,13 +60,14 @@ public class SampleController {
     public PageResponse<SampleSummary> list(
             @RequestParam(required = false) String search,
             @RequestParam(required = false) Long representativeId,
+            @RequestParam(required = false) Long customerId,
             @RequestParam(required = false) Long productId,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
             @RequestParam(required = false) SampleStatus status,
             @SortDefault.SortDefaults({@SortDefault(sort = "issueDate", direction = Sort.Direction.DESC),
                     @SortDefault(sort = "id", direction = Sort.Direction.DESC)}) @PageableDefault Pageable pageable) {
-        return service.search(new SampleFilter(search, representativeId, productId, from, to, status), SORTABLE.check(pageable));
+        return service.search(new SampleFilter(search, representativeId, customerId, productId, from, to, status), SORTABLE.check(pageable));
     }
 
     @GetMapping("/api/samples/{id}")
@@ -92,23 +93,25 @@ public class SampleController {
     @PreAuthorize("hasAuthority('SAMPLE_VIEW')")
     public ReportPage<SampleLineRow, SampleReportSummary> reportLines(
             @RequestParam(required = false) Long representativeId,
+            @RequestParam(required = false) Long customerId,
             @RequestParam(required = false) Long productId,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
             @RequestParam(required = false) SampleStatus status,
             @PageableDefault(size = 50) Pageable pageable) {
-        return reports.lines(new SampleReportFilter(representativeId, productId, from, to, status), pageable);
+        return reports.lines(new SampleReportFilter(representativeId, customerId, productId, from, to, status), pageable);
     }
 
     @GetMapping("/api/sample-reports/representatives")
     @PreAuthorize("hasAuthority('SAMPLE_VIEW')")
     public ReportPage<SampleRepresentativeRow, SampleReportSummary> reportRepresentatives(
             @RequestParam(required = false) Long representativeId,
+            @RequestParam(required = false) Long customerId,
             @RequestParam(required = false) Long productId,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
             @RequestParam(required = false) SampleStatus status,
             @PageableDefault(size = 50) Pageable pageable) {
-        return reports.representatives(new SampleReportFilter(representativeId, productId, from, to, status), pageable);
+        return reports.representatives(new SampleReportFilter(representativeId, customerId, productId, from, to, status), pageable);
     }
 }

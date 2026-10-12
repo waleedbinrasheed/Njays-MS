@@ -113,7 +113,10 @@ export function SampleReturnsPage() {
                       {r.sampleNumber}
                     </Link>
                   </td>
-                  <td className="px-4 py-2.5">{r.representative.name}</td>
+                  <td className="px-4 py-2.5">
+                    <div>{r.representative.name}</div>
+                    {r.customer && <div className="text-xs text-slate-500">for {r.customer.name}</div>}
+                  </td>
                   <td className="px-4 py-2.5 text-right tabular-nums">{r.totalQuantity}</td>
                   <td className="whitespace-nowrap px-4 py-2.5 text-right tabular-nums">{formatCurrency(r.total)}</td>
                   <td className="whitespace-nowrap px-4 py-2.5">{r.createdBy?.name ?? "-"}</td>

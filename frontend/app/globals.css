@@ -5,13 +5,66 @@
   --font-sans: ui-sans-serif, system-ui, "Segoe UI", Roboto, Arial, sans-serif;
 }
 
+/*
+ * Two invoice copies on one A4 page (features/documents/TwoCopyPrint.tsx). The block is laid out
+ * off-screen at the printable width (210mm - 2 x 8mm margins) so it can be measured before printing:
+ * two halves of 136mm with a 9mm cut line fit in the 281mm printable height.
+ */
+.two-copy-print {
+  position: absolute;
+  top: 0;
+  left: -10000px;
+  width: 194mm;
+  visibility: hidden;
+  pointer-events: none;
+  background: white;
+}
+.two-copy-print .copy-half {
+  height: 136mm;
+  overflow: hidden;
+}
+.two-copy-print .cut-line {
+  display: flex;
+  height: 9mm;
+  align-items: center;
+  gap: 2mm;
+  font-size: 9px;
+  color: var(--color-slate-500);
+}
+.two-copy-print .cut-line-rule {
+  flex: 1;
+  border-top: 1px dashed var(--color-slate-500);
+}
+
 @media print {
   @page {
     size: A4;
-    margin: 12mm;
+    margin: 8mm;
   }
   body {
     background: white !important;
+  }
+  html:not([data-print-mode]) .two-copy-print {
+    display: none;
+  }
+  html[data-print-mode] .print-single {
+    display: none !important;
+  }
+  html[data-print-mode] .two-copy-print {
+    position: static;
+    width: auto;
+    visibility: visible;
+  }
+  /* A copy too long for half a page: each copy on its own page, no cut line. */
+  html[data-print-mode="two-full"] .two-copy-print .copy-half {
+    height: auto;
+    overflow: visible;
+  }
+  html[data-print-mode="two-full"] .two-copy-print .copy-half:first-child {
+    break-after: page;
+  }
+  html[data-print-mode="two-full"] .two-copy-print .cut-line {
+    display: none;
   }
 }
 
