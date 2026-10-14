@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { BRAND_NAME, BrandLogo } from "@/components/brand/Brand";
 import { Button } from "@/components/ui/Button";
 import { EmptyState, ErrorBanner, PageHeader } from "@/components/ui/Feedback";
 import { Pagination } from "@/components/ui/Pagination";
@@ -89,6 +90,10 @@ export function ReportShell<T>({
       </div>
 
       <div className="mb-4 hidden print:block">
+        <div className="mb-2 flex items-center gap-3 border-b border-slate-300 pb-2">
+          <BrandLogo className="h-14 w-auto" />
+          <p className="text-base font-semibold">{BRAND_NAME}</p>
+        </div>
         <h1 className="text-lg font-semibold">{title}</h1>
         <p className="text-xs text-slate-600">
           {filterSummary || "No filters"} · Printed {formatDateTime(new Date().toISOString())}

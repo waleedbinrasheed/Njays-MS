@@ -34,7 +34,7 @@ public record AppProperties(Security security, Bootstrap bootstrap, String timez
 
     public record Business(String name, String address, String phone, String email) {
         public Business {
-            if (name == null || name.isBlank()) name = "Book Shop";
+            if (name == null || name.isBlank()) name = "Leading Publishers";
         }
     }
 

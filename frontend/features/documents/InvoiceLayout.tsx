@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { BrandLogo } from "@/components/brand/Brand";
 import { useApiQuery } from "@/hooks/useApiQuery";
 import { settingsService } from "@/services/purchaseService";
 import { formatCurrency } from "@/utils/format";
@@ -50,10 +51,13 @@ export function InvoiceLayout({ heading, number, cancelled, party, meta, priceLa
       )}
 
       <header className="flex flex-col gap-4 border-b border-slate-200 pb-5 sm:flex-row sm:justify-between">
-        <div>
-          <p className="text-lg font-semibold text-slate-900">{b?.name ?? ""}</p>
-          {b?.address && <p className="whitespace-pre-line text-sm text-slate-600">{b.address}</p>}
-          <p className="text-sm text-slate-600">{[b?.phone, b?.email].filter(Boolean).join(" · ")}</p>
+        <div className="flex items-start gap-4">
+          <BrandLogo className="h-20 w-auto shrink-0" />
+          <div>
+            <p className="text-lg font-semibold text-slate-900">{b?.name ?? ""}</p>
+            {b?.address && <p className="whitespace-pre-line text-sm text-slate-600">{b.address}</p>}
+            <p className="text-sm text-slate-600">{[b?.phone, b?.email].filter(Boolean).join(" · ")}</p>
+          </div>
         </div>
         <div className="sm:text-right">
           <p className="text-xl font-semibold uppercase tracking-wide text-slate-900">{heading}</p>

@@ -1,5 +1,6 @@
 "use client";
 
+import { BrandLogo } from "@/components/brand/Brand";
 import { useApiQuery } from "@/hooks/useApiQuery";
 import { settingsService } from "@/services/purchaseService";
 import type { BusinessDetails } from "@/types/purchase";
@@ -75,9 +76,12 @@ function CompactInvoice({
       )}
 
       <header className="flex items-start justify-between gap-4 border-b border-slate-400 pb-1.5">
-        <div className="min-w-0">
-          <p className="text-sm font-semibold">{b?.name ?? ""}</p>
-          <p className="text-slate-600">{[b?.address?.replace(/\s*\n\s*/g, ", "), b?.phone, b?.email].filter(Boolean).join(" · ")}</p>
+        <div className="flex min-w-0 items-center gap-2">
+          <BrandLogo className="h-12 w-auto shrink-0" />
+          <div className="min-w-0">
+            <p className="text-sm font-semibold">{b?.name ?? ""}</p>
+            <p className="text-slate-600">{[b?.address?.replace(/\s*\n\s*/g, ", "), b?.phone, b?.email].filter(Boolean).join(" · ")}</p>
+          </div>
         </div>
         <div className="shrink-0 text-right">
           <p className="rounded border border-slate-500 px-1.5 text-[10px] font-semibold uppercase tracking-wider">{copyLabel}</p>

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { BRAND_NAME, BrandLogo } from "@/components/brand/Brand";
 import { usePathname } from "next/navigation";
 import { useState, type ReactNode } from "react";
 import { useAuth } from "@/features/auth/AuthProvider";
@@ -83,8 +84,12 @@ export function AppShell({ children }: { children: ReactNode }) {
               <path d="M2 4.75A.75.75 0 0 1 2.75 4h14.5a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 4.75Zm0 5A.75.75 0 0 1 2.75 9h14.5a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 9.75Zm0 5a.75.75 0 0 1 .75-.75h14.5a.75.75 0 0 1 0 1.5H2.75a.75.75 0 0 1-.75-.75Z" />
             </svg>
           </button>
-          <Link href="/" className="text-sm font-semibold text-slate-900">
-            Inventory Management
+          <Link href="/" className="flex items-center gap-2.5">
+            <BrandLogo className="h-10 w-auto" />
+            <span className="leading-tight">
+              <span className="block text-sm font-semibold text-slate-900">{BRAND_NAME}</span>
+              <span className="block text-xs text-slate-500">Inventory Management</span>
+            </span>
           </Link>
         </div>
         <div className="flex items-center gap-3 text-sm">

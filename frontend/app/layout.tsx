@@ -3,8 +3,8 @@ import { Providers } from "@/components/Providers";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Inventory Management System",
-  description: "Inventory, purchases and sales management",
+  title: "Leading Publishers · Inventory",
+  description: "Leading Publishers inventory, purchases, sales and samples",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
