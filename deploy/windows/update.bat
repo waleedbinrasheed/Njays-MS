@@ -30,10 +30,9 @@ if not errorlevel 1 (
   )
 )
 
-echo Loading the new images. This takes a few minutes...
-docker load -i images.tar
+call "%~dp0load-images.bat"
 if errorlevel 1 (
-  echo Loading images failed. Nothing was changed.
+  echo Nothing was changed.
   pause
   exit /b 1
 )

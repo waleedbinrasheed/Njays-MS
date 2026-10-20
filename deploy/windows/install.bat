@@ -9,6 +9,13 @@ echo.
 echo === Leading Publishers Inventory: installation ===
 echo.
 
+if not exist "docker-compose.yml" (
+  echo docker-compose.yml is not in this folder. Run install.bat from the release folder
+  echo ^(the unzipped LeadingIMS-^<version^>.zip^), not from the project's deploy\windows folder.
+  pause
+  exit /b 1
+)
+
 docker info >nul 2>&1
 if errorlevel 1 (
   echo Docker Desktop is not running. Start Docker Desktop, wait until it says "Engine running",
@@ -38,10 +45,8 @@ if not errorlevel 1 (
 
 if not exist "backups" mkdir "backups"
 
-echo Loading the application images. This takes a few minutes...
-docker load -i images.tar
+call "%~dp0load-images.bat"
 if errorlevel 1 (
-  echo Loading images failed. Check that images.tar is complete and there is enough disk space.
   pause
   exit /b 1
 )
