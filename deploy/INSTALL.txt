@@ -1,0 +1,43 @@
+LEADING PUBLISHERS INVENTORY - INSTALLATION ON THE OFFICE PC (Windows)
+======================================================================
+
+WHAT YOU NEED
+- Windows 10/11 64-bit, 8 GB RAM, 20 GB free disk, virtualization enabled in BIOS.
+- Docker Desktop installed (bring the installer on USB if the PC has no internet).
+- A fixed IP address for this PC on the office network (ask whoever manages the router).
+
+ONE-TIME SETUP
+1. Install Docker Desktop. In Docker Desktop > Settings > General tick
+   "Start Docker Desktop when you sign in to your computer". Wait for "Engine running".
+2. Copy this whole folder to C:\LeadingIMS (any folder works; keep it there).
+3. Right-click install.bat > "Run as administrator".
+   - The first run creates .env and opens it in Notepad: set DB_PASSWORD and
+     ADMIN_INITIAL_PASSWORD (letters and digits only), fill in the business address
+     and phone, save, close Notepad.
+   - Run install.bat as administrator again. It loads the application, starts it,
+     opens port 80 in Windows Firewall and shows the address to use.
+4. On any office PC open http://<this-pc-ip>  (shown at the end of install.bat).
+   Sign in as "admin" with ADMIN_INITIAL_PASSWORD and choose a new password.
+
+DAILY USE
+- Nothing to do: the application starts with Docker Desktop when someone signs in to Windows.
+  (If this PC restarts, someone must sign in to Windows before the application is available.)
+- start.bat / stop.bat     start or stop the application (data is kept)
+- status.bat               is everything running? latest backups
+- logs.bat                 what the application is doing (Ctrl+C to close)
+
+BACKUPS
+- Automatic every day (first time the PC is on after 2:00), kept 14 days, in the
+  "backups" folder here.
+- backup-now.bat makes one immediately.
+- Copy the newest backup to a USB drive or another PC every week: if this PC's disk
+  fails, the backups folder is lost with it.
+- restore.bat replaces all data with a chosen backup (a safety backup is made first).
+
+UPDATING TO A NEW VERSION
+1. Copy all files of the new release into this folder, overwriting when asked.
+   (.env and the backups folder are not in a release, so they stay as they are.)
+2. Run update.bat. It backs up, loads the new version and starts it. Data is kept.
+
+KEEP PRIVATE
+- .env contains the database password. Do not share or e-mail it.

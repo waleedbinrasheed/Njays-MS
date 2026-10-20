@@ -1,0 +1,14 @@
+# Used only on the build machine, together with docker-compose.yml:
+#   docker compose -f docker-compose.yml -f docker-compose.build.yml build
+# The client PC never builds; it loads the ready-made images from the release.
+
+services:
+  api:
+    build:
+      context: ../backend
+  web:
+    build:
+      context: ../frontend
+      args:
+        # The web container reaches the API by its service name on the Docker network.
+        BACKEND_URL: http://api:8080

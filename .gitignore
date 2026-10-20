@@ -36,3 +36,9 @@ Thumbs.db
 
 # Office lock files
 ~$*
+
+# Docker deployment: real settings, local backups and built releases never go to git.
+deploy/.env
+deploy/backups/
+release/
+!deploy/.env.example

@@ -6,6 +6,9 @@ const backendUrl = process.env.BACKEND_URL ?? "http://localhost:8080";
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  // The Docker image runs the self-contained server (.next/standalone/server.js); other builds
+  // (development, the Render demo with `next start`) keep the normal output.
+  output: process.env.NEXT_OUTPUT === "standalone" ? "standalone" : undefined,
   // Lets a second build (e.g. for testing against another backend) live beside the normal one.
   distDir: process.env.NEXT_DIST_DIR || ".next",
   // Pin the project root so stray lockfiles in parent folders are ignored.

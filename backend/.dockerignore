@@ -1,0 +1,8 @@
+# Never copy local credentials or build output into the image.
+application-local.yml
+target/
+.jdk/
+app.jar
+*.log
+.idea/
+.vscode/
