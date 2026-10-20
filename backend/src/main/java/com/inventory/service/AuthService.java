@@ -11,6 +11,7 @@ import com.inventory.mapper.UserMapper;
 import com.inventory.repository.AppUserRepository;
 import com.inventory.security.AppUserPrincipal;
 import com.inventory.security.CurrentUser;
+import com.inventory.security.LoginAttemptService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
@@ -47,6 +48,7 @@ public class AuthService {
     private final AppUserRepository users;
     private final PasswordEncoder passwordEncoder;
     private final Clock clock;
+    private final LoginAttemptService loginAttempts;
     private final long sessionTimeoutSeconds;
     private final SecurityContextHolderStrategy holder = SecurityContextHolder.getContextHolderStrategy();
 
@@ -56,6 +58,7 @@ public class AuthService {
                        AppUserRepository users,
                        PasswordEncoder passwordEncoder,
                        Clock clock,
+                       LoginAttemptService loginAttempts,
                        AppProperties properties) {
         this.authenticationManager = authenticationManager;
         this.contextRepository = contextRepository;
@@ -64,21 +67,32 @@ public class AuthService {
         this.users = users;
         this.passwordEncoder = passwordEncoder;
         this.clock = clock;
+        this.loginAttempts = loginAttempts;
         this.sessionTimeoutSeconds = properties.security().sessionTimeout().toSeconds();
     }
 
     public CurrentUserResponse login(LoginRequest request, HttpServletRequest httpRequest,
                                      HttpServletResponse httpResponse) {
+        String username = request.username().trim();
+        // Checked before the password, so a locked username cannot keep being guessed.
+        loginAttempts.lockedFor(username).ifPresent(left -> {
+            log.warn("Sign-in refused for '{}': too many failed attempts", username);
+            long minutes = Math.max(1, (left.toSeconds() + 59) / 60);
+            throw new BusinessException(HttpStatus.TOO_MANY_REQUESTS,
+                    "Too many failed sign-in attempts. Try again in " + minutes + " minute" + (minutes == 1 ? "" : "s"));
+        });
         Authentication auth;
         try {
             auth = authenticationManager.authenticate(
-                    UsernamePasswordAuthenticationToken.unauthenticated(request.username().trim(), request.password()));
+                    UsernamePasswordAuthenticationToken.unauthenticated(username, request.password()));
         } catch (DisabledException ex) {
             throw new BusinessException(HttpStatus.UNAUTHORIZED, "Your account is inactive. Contact an administrator");
         } catch (AuthenticationException ex) {
-            log.info("Failed login attempt for '{}'", request.username());
+            loginAttempts.recordFailure(username);
+            log.info("Failed login attempt for '{}'", username);
             throw new BusinessException(HttpStatus.UNAUTHORIZED, "Invalid username or password");
         }
+        loginAttempts.recordSuccess(username);
         AppUserPrincipal principal = (AppUserPrincipal) auth.getPrincipal();
 
         // Always start a brand-new session on login (prevents session fixation).

@@ -29,6 +29,12 @@ one company-wide inventory, one stock location.
 - Login verifies the password before revealing that an account is inactive; unknown user and
   wrong password return the same message. A new session id is issued on login and the CSRF token
   is rotated.
+- Password guessing is throttled: 5 wrong passwords for a username lock that username for 15 minutes
+  (HTTP 429, checked before the password; in memory, cleared by a successful sign-in).
+- `EndpointSecurityIT` discovers every API endpoint at runtime and checks that anonymous callers get
+  401, a user whose role has no permissions gets 403 (before any body is read), and state-changing
+  requests without a CSRF token are refused. A new endpoint without a permission rule fails the build.
+- Pages from Next.js carry X-Frame-Options, nosniff, Referrer-Policy, Permissions-Policy and COOP headers.
 
 ## Backend (`backend/`, package `com.inventory`)
 

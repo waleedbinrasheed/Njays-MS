@@ -78,6 +78,37 @@ class AuthenticationIT extends ApiTestBase {
     }
 
     @Test
+    void repeatedWrongPasswordsLockTheUsernameForAWhile() throws Exception {
+        AppUser user = testUsers.normalUser();
+        for (int i = 0; i < 5; i++) {
+            mvc.perform(withJson(post("/api/auth/login"), Map.of("username", user.getUsername(), "password", "Wrong1234")))
+                    .andExpect(status().isUnauthorized());
+        }
+
+        // Even the right password is refused while locked, without revealing whether it was right.
+        mvc.perform(withJson(post("/api/auth/login"), Map.of("username", user.getUsername().toUpperCase(),
+                        "password", TestUsers.PASSWORD)))
+                .andExpect(status().isTooManyRequests())
+                .andExpect(jsonPath("$.message").value("Too many failed sign-in attempts. Try again in 15 minutes"));
+
+        // Other users are not affected.
+        login(testUsers.normalUser().getUsername());
+    }
+
+    @Test
+    void successfulSignInClearsEarlierFailures() throws Exception {
+        AppUser user = testUsers.normalUser();
+        for (int i = 0; i < 4; i++) {
+            mvc.perform(withJson(post("/api/auth/login"), Map.of("username", user.getUsername(), "password", "Wrong1234")))
+                    .andExpect(status().isUnauthorized());
+        }
+        login(user.getUsername());
+        mvc.perform(withJson(post("/api/auth/login"), Map.of("username", user.getUsername(), "password", "Wrong1234")))
+                .andExpect(status().isUnauthorized());
+        login(user.getUsername());
+    }
+
+    @Test
     void inactiveUserCannotLogIn() throws Exception {
         AppUser user = testUsers.create(TestUsers.uniqueName("inactive"), "NORMAL_USER", false, false);
 
