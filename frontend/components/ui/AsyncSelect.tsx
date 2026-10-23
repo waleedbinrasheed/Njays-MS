@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
+import { useEffect, useId, useRef, useState, type KeyboardEvent, type UIEvent } from "react";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 
 export interface Option<T = unknown> {
@@ -11,12 +11,20 @@ export interface Option<T = unknown> {
   data?: T;
 }
 
+/** One page of options and whether the server has more after it. */
+export interface OptionPage {
+  options: Option[];
+  hasMore: boolean;
+}
+
+/** Loads one page (zero-based) of options matching the typed text. */
+export type OptionLoader = (search: string, signal: AbortSignal, page: number) => Promise<OptionPage>;
+
 interface AsyncSelectProps {
   label: string;
   value: Option | null;
   onChange: (value: Option | null) => void;
-  /** Called with the typed text; should return a short list (e.g. first 20 matches). */
-  load: (search: string, signal: AbortSignal) => Promise<Option[]>;
+  load: OptionLoader;
   placeholder?: string;
   error?: string;
   required?: boolean;
@@ -24,7 +32,14 @@ interface AsyncSelectProps {
   disabled?: boolean;
 }
 
-/** Type-to-search picker backed by the API, so large lists are never loaded into the browser. */
+/** Load the next page when the list is scrolled to within this many pixels of the bottom. */
+const LOAD_MORE_THRESHOLD = 40;
+
+/**
+ * Type-to-search picker backed by the API, so large lists are never loaded into the browser all at
+ * once: the first page arrives when the list opens, and further pages as the user scrolls (or
+ * arrows) to the end of the list.
+ */
 export function AsyncSelect({
   label,
   value,
@@ -41,11 +56,15 @@ export function AsyncSelect({
   const [text, setText] = useState("");
   const [options, setOptions] = useState<Option[]>([]);
   const [loadedFor, setLoadedFor] = useState<string | null>(null);
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [highlight, setHighlight] = useState(0);
   const debounced = useDebouncedValue(text, 250);
   const loadRef = useRef(load);
   const onChangeRef = useRef(onChange);
   const containerRef = useRef<HTMLDivElement>(null);
+  const moreController = useRef<AbortController | null>(null);
   // Enter pressed before results arrived (e.g. a barcode scanner): pick when they land.
   const pendingEnter = useRef(false);
 
@@ -54,28 +73,34 @@ export function AsyncSelect({
     onChangeRef.current = onChange;
   });
 
+  // First page whenever the list opens or the search text changes.
   useEffect(() => {
     if (!open) return;
     const controller = new AbortController();
+    moreController.current?.abort();
     loadRef
-      .current(debounced, controller.signal)
+      .current(debounced, controller.signal, 0)
       .then((result) => {
         if (pendingEnter.current) {
           pendingEnter.current = false;
-          if (result.length === 1) {
-            onChangeRef.current(result[0]);
+          if (result.options.length === 1) {
+            onChangeRef.current(result.options[0]);
             setText("");
             setOpen(false);
             return;
           }
         }
-        setOptions(result);
+        setOptions(result.options);
+        setHasMore(result.hasMore);
+        setPage(0);
+        setLoadingMore(false);
         setHighlight(0);
         setLoadedFor(debounced);
       })
       .catch(() => {
         if (!controller.signal.aborted) {
           setOptions([]);
+          setHasMore(false);
           setLoadedFor(debounced);
         }
       });
@@ -91,7 +116,41 @@ export function AsyncSelect({
     return () => document.removeEventListener("mousedown", onDocClick);
   }, [open]);
 
+  useEffect(() => () => moreController.current?.abort(), []);
+
   const loading = open && loadedFor !== debounced;
+
+  /** Appends the next page (skipping anything already listed, in case records changed meanwhile). */
+  function loadMore() {
+    if (!hasMore || loadingMore || loading || loadedFor === null) return;
+    const controller = new AbortController();
+    moreController.current = controller;
+    const search = loadedFor;
+    const next = page + 1;
+    setLoadingMore(true);
+    loadRef
+      .current(search, controller.signal, next)
+      .then((result) => {
+        setOptions((current) => {
+          const seen = new Set(current.map((o) => o.id));
+          return [...current, ...result.options.filter((o) => !seen.has(o.id))];
+        });
+        setHasMore(result.hasMore);
+        setPage(next);
+        setLoadingMore(false);
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) {
+          setHasMore(false);
+          setLoadingMore(false);
+        }
+      });
+  }
+
+  function onListScroll(e: UIEvent<HTMLUListElement>) {
+    const el = e.currentTarget;
+    if (el.scrollTop + el.clientHeight >= el.scrollHeight - LOAD_MORE_THRESHOLD) loadMore();
+  }
 
   function choose(option: Option) {
     onChange(option);
@@ -103,6 +162,7 @@ export function AsyncSelect({
     if (e.key === "ArrowDown") {
       e.preventDefault();
       setOpen(true);
+      if (highlight >= options.length - 2) loadMore();
       setHighlight((h) => Math.min(h + 1, options.length - 1));
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
@@ -160,6 +220,7 @@ export function AsyncSelect({
           <ul
             id={`${id}-list`}
             role="listbox"
+            onScroll={onListScroll}
             className="absolute z-40 mt-1 max-h-60 w-full overflow-y-auto rounded-md border border-slate-200 bg-white py-1 text-sm shadow-lg"
           >
             {loading && <li className="px-3 py-2 text-slate-500">Searching...</li>}
@@ -181,6 +242,17 @@ export function AsyncSelect({
                   {o.detail && <div className="text-xs text-slate-500">{o.detail}</div>}
                 </li>
               ))}
+            {!loading && hasMore && (
+              <li role="presentation" className="px-3 py-2 text-center text-xs text-slate-500">
+                {loadingMore ? (
+                  "Loading more..."
+                ) : (
+                  <button type="button" className="text-blue-700 hover:underline" onMouseDown={(e) => e.preventDefault()} onClick={loadMore}>
+                    Show more
+                  </button>
+                )}
+              </li>
+            )}
           </ul>
         )}
       </div>
