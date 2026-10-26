@@ -59,7 +59,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { label: "Categories", href: "/master/categories", permission: "MASTER_DATA_VIEW", ready: true },
       { label: "Suppliers", href: "/master/suppliers", permission: "MASTER_DATA_VIEW", ready: true },
       { label: "Representatives", href: "/master/representatives", permission: "MASTER_DATA_VIEW", ready: true },
-      { label: "Customers", href: "/master/customers", permission: "MASTER_DATA_VIEW", ready: true },
+      { label: "Schools", href: "/master/customers", permission: "MASTER_DATA_VIEW", ready: true },
     ],
   },
   {

@@ -6,7 +6,7 @@ export function CustomerBlock({ name, phone, address }: { name: string; phone: s
   return (
     <div className="mt-2">
       <p className="text-slate-600">
-        Customer: <span className="font-medium text-slate-900">{name}</span>
+        School: <span className="font-medium text-slate-900">{name}</span>
         {phone ? ` · ${phone}` : ""}
       </p>
       {address && <p className="whitespace-pre-line text-slate-600">{address}</p>}

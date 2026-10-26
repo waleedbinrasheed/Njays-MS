@@ -133,12 +133,12 @@ export function NewSamplePage() {
             lines={lines}
             onChange={setLines}
             priceLabel="Sample price"
-            defaultPrice={(i) => i.purchasePrice}
+            defaultPrice={(i) => i.sellingPrice}
             showStockWarning
             simple
           />
           <p className="mt-2 text-xs text-slate-500">
-            The sample price starts at the book&apos;s purchase price (actual cost) and can be changed, but not above its selling price.
+            The sample price starts at the book&apos;s selling price and can be lowered, but not raised above it.
           </p>
           {errors.lines && <p className="mt-2 text-sm text-red-600">{errors.lines}</p>}
         </section>

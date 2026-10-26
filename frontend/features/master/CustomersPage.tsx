@@ -88,7 +88,7 @@ export function CustomersPage() {
 
   return (
     <EntityListPage<Customer>
-      title="Customers"
+      title="Schools"
       description="Each customer belongs to a representative; sales are billed to the representative."
       noun="customer"
       list={customerService.list}

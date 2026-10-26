@@ -51,7 +51,7 @@ export function SampleReturnDetailPage({ id }: { id: number }) {
             )}
             {r.customer && (
               <p className="mt-2 text-slate-600">
-                For customer: <span className="font-medium text-slate-900">{r.customer.name}</span>
+                School: <span className="font-medium text-slate-900">{r.customer.name}</span>
               </p>
             )}
           </>
