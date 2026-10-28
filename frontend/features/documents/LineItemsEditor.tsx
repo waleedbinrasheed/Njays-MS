@@ -1,6 +1,5 @@
 "use client";
 
-import { useRef } from "react";
 import { AsyncSelect, type Option } from "@/components/ui/AsyncSelect";
 import { EmptyState } from "@/components/ui/Feedback";
 import { loadActiveProductOptions } from "@/features/inventory/lookups";
@@ -56,8 +55,6 @@ export function LineItemsEditor({
   showStockWarning = false,
   simple = false,
 }: LineItemsEditorProps) {
-  const qtyRefs = useRef(new Map<number, HTMLInputElement>());
-
   function add(option: Option | null) {
     const item = option?.data as InventoryItem | undefined;
     if (!item) return;
@@ -80,8 +77,6 @@ export function LineItemsEditor({
         },
       ]);
     }
-    // Let the user type the quantity straight away.
-    setTimeout(() => qtyRefs.current.get(item.productId)?.select(), 0);
   }
 
   const update = (productId: number, patch: Partial<DraftLine>) =>
@@ -100,6 +95,8 @@ export function LineItemsEditor({
           load={loadActiveProductOptions}
           placeholder="Type or scan ISBN, title or author, then press Enter"
           clearable={false}
+          keepOpenOnSelect
+          selectedIds={lines.map((l) => l.productId)}
         />
       </div>
 
@@ -147,10 +144,6 @@ export function LineItemsEditor({
                   </td>
                   <td className="px-3 py-2">
                     <input
-                      ref={(el) => {
-                        if (el) qtyRefs.current.set(l.productId, el);
-                        else qtyRefs.current.delete(l.productId);
-                      }}
                       aria-label={`Quantity of ${l.title}`}
                       type="number"
                       inputMode="numeric"

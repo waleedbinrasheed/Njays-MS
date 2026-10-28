@@ -30,6 +30,13 @@ interface AsyncSelectProps {
   required?: boolean;
   clearable?: boolean;
   disabled?: boolean;
+  /**
+   * Multi-select use: after a pick the list stays open, the search text is cleared and the cursor
+   * stays in the box, so several items can be picked in one go. Clicking outside, Escape or Tab closes it.
+   */
+  keepOpenOnSelect?: boolean;
+  /** Ids already chosen elsewhere (e.g. items on the invoice); they are marked with a tick in the list. */
+  selectedIds?: number[];
 }
 
 /** Load the next page when the list is scrolled to within this many pixels of the bottom. */
@@ -50,8 +57,11 @@ export function AsyncSelect({
   required,
   clearable = true,
   disabled,
+  keepOpenOnSelect = false,
+  selectedIds,
 }: AsyncSelectProps) {
   const id = useId();
+  const inputRef = useRef<HTMLInputElement>(null);
   const [open, setOpen] = useState(false);
   const [text, setText] = useState("");
   const [options, setOptions] = useState<Option[]>([]);
@@ -68,9 +78,12 @@ export function AsyncSelect({
   // Enter pressed before results arrived (e.g. a barcode scanner): pick when they land.
   const pendingEnter = useRef(false);
 
+  const keepOpenRef = useRef(keepOpenOnSelect);
+
   useEffect(() => {
     loadRef.current = load;
     onChangeRef.current = onChange;
+    keepOpenRef.current = keepOpenOnSelect;
   });
 
   // First page whenever the list opens or the search text changes.
@@ -86,7 +99,7 @@ export function AsyncSelect({
           if (result.options.length === 1) {
             onChangeRef.current(result.options[0]);
             setText("");
-            setOpen(false);
+            if (!keepOpenRef.current) setOpen(false);
             return;
           }
         }
@@ -155,7 +168,12 @@ export function AsyncSelect({
   function choose(option: Option) {
     onChange(option);
     setText("");
-    setOpen(false);
+    if (keepOpenOnSelect) {
+      setOpen(true);
+      inputRef.current?.focus();
+    } else {
+      setOpen(false);
+    }
   }
 
   function onKeyDown(e: KeyboardEvent<HTMLInputElement>) {
@@ -171,7 +189,8 @@ export function AsyncSelect({
       e.preventDefault();
       if (loading || text !== debounced) pendingEnter.current = true;
       else if (options[highlight]) choose(options[highlight]);
-    } else if (e.key === "Escape") {
+    } else if (e.key === "Escape" || e.key === "Tab") {
+      // Escape and Tab-away close the list (Tab is not prevented, so focus moves on as usual).
       setOpen(false);
     }
   }
@@ -187,6 +206,7 @@ export function AsyncSelect({
       <div className="relative">
         <div className={`flex items-center rounded-md border bg-white shadow-xs focus-within:outline-2 ${border}`}>
           <input
+            ref={inputRef}
             id={id}
             role="combobox"
             aria-expanded={open}
@@ -238,8 +258,17 @@ export function AsyncSelect({
                     choose(o);
                   }}
                 >
-                  <div>{o.label}</div>
-                  {o.detail && <div className="text-xs text-slate-500">{o.detail}</div>}
+                  <div className="flex items-start gap-2">
+                    {selectedIds?.includes(o.id) && (
+                      <span className="text-emerald-600" aria-label="Already added" title="Already added">
+                        ✓
+                      </span>
+                    )}
+                    <div className="min-w-0">
+                      <div>{o.label}</div>
+                      {o.detail && <div className="text-xs text-slate-500">{o.detail}</div>}
+                    </div>
+                  </div>
                 </li>
               ))}
             {!loading && hasMore && (
