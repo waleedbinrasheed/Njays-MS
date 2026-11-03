@@ -40,9 +40,11 @@ export const fabricService = crud<Fabric, FabricInput>("/fabrics");
 export const garmentTypeService = crud<GarmentType, GarmentTypeInput>("/garment-types");
 
 export const measurementService = {
-  /** Records of one customer, newest first. */
+  /** Records of one customer, newest first (the first 100; the API's page limit). */
   forCustomer: (customerId: number, signal?: AbortSignal) =>
-    api.get<MeasurementRecord[]>(`/customers/${customerId}/measurements`, undefined, signal),
+    api
+      .get<Page<MeasurementRecord>>(`/customers/${customerId}/measurements`, { size: 100 }, signal)
+      .then((page) => page.content),
   takeForCustomer: (customerId: number, input: MeasurementRecordInput) =>
     api.post<MeasurementRecord>(`/customers/${customerId}/measurements`, input),
   /** All records across customers (read-only). */
