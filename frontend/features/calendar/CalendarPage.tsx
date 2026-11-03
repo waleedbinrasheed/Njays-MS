@@ -167,12 +167,21 @@ export function CalendarPage() {
                       {SHORT[e.dateType]}: {e.customerName}
                     </Link>
                   ))}
-                  {entries.length > 3 && <p className="px-1 text-[11px] text-slate-500">+{entries.length - 3} more</p>}
+                  {entries.length > 3 && (
+                    <button
+                      type="button"
+                      onClick={() => setSelected(iso)}
+                      className="px-1 text-[11px] font-medium text-blue-700 hover:underline"
+                    >
+                      +{entries.length - 3} more
+                    </button>
+                  )}
                 </div>
-                <div className="flex flex-wrap gap-0.5 sm:hidden" aria-hidden>
+                <div className="flex flex-wrap items-center gap-0.5 sm:hidden" aria-hidden>
                   {entries.slice(0, 4).map((e, i) => (
                     <span key={i} className={`inline-block h-1.5 w-1.5 rounded-full ${DOT[e.dateType]}`} />
                   ))}
+                  {entries.length > 4 && <span className="text-[10px] font-medium text-slate-600">+{entries.length - 4}</span>}
                 </div>
               </div>
             );
@@ -183,11 +192,14 @@ export function CalendarPage() {
       <section className="mt-6 overflow-hidden rounded-lg border border-slate-200 bg-white">
         <h2 className="border-b border-slate-200 px-4 py-3 text-sm font-semibold text-slate-900">
           {parseIso(selected).toLocaleDateString("en-PK", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
+          <span className="ml-2 font-normal text-slate-500">
+            · {dayEntries.length} {dayEntries.length === 1 ? "date" : "dates"}
+          </span>
         </h2>
         {dayEntries.length === 0 ? (
           <EmptyState title="Nothing scheduled for this day" description="Choose another day, or change the date filters above." />
         ) : (
-          <ul className="divide-y divide-slate-100">
+          <ul className="max-h-[32rem] divide-y divide-slate-100 overflow-y-auto">
             {dayEntries.map((e, i) => (
               <li key={`${e.orderId}-${e.dateType}-${i}`} className="flex flex-wrap items-center justify-between gap-2 px-4 py-2.5 text-sm">
                 <div className="flex min-w-0 items-center gap-3">

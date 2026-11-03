@@ -16,7 +16,7 @@ class ReportIT extends TailoringIT {
     @Test
     void ordersReportCountsOnlyLiveOrdersInTheTotals() throws Exception {
         long customer = createCustomer("Report Customer", "0300-7000001");
-        long shirt = createGarmentType("Report Shirt", "TOP", "Chest").get("id").asLong();
+        long shirt = createGarmentType("Report Shirt", "Chest").get("id").asLong();
         createOrder(orderBody(customer, dueInDays(5), customerLine(shirt, "200")));
         JsonNode cancelled = createOrder(orderBody(customer, dueInDays(6), customerLine(shirt, "300")));
 

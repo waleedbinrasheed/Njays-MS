@@ -1,4 +1,4 @@
-import { GarmentPictorial } from "@/components/measurements/GarmentPictorial";
+import { DressMeasurements } from "@/components/measurements/DressMeasurements";
 import type { Order } from "@/types/order";
 import type { BusinessDetails } from "@/types/settings";
 import { formatCurrency, formatDate } from "@/utils/format";
@@ -77,7 +77,7 @@ export function OrderInvoice({ order: o, business: b, copyLabel, compact = false
             <thead className={`text-left ${small} uppercase text-slate-600`}>
               <tr>
                 <th className="py-0.5 pr-1 font-medium">#</th>
-                <th className="py-0.5 pr-1 font-medium">Garment</th>
+                <th className="py-0.5 pr-1 font-medium">Dress</th>
                 <th className="py-0.5 pr-1 font-medium">Fabric</th>
                 <th className="py-0.5 pr-1 text-right font-medium">Stitching</th>
                 <th className="py-0.5 text-right font-medium">Amount</th>
@@ -111,10 +111,10 @@ export function OrderInvoice({ order: o, business: b, copyLabel, compact = false
           {l.measurements.length > 0 ? (
             <div>
               <p className={`${small} font-semibold uppercase text-slate-600`}>Measurements (inches)</p>
-              <GarmentPictorial shape={l.garmentType.shape} measurements={l.measurements} compact={compact} />
+              <DressMeasurements code={l.garmentType.code} dressName={l.garmentType.name} measurements={l.measurements} compact={compact} />
             </div>
           ) : (
-            <p className={`${small} text-slate-500`}>No measurements recorded for this garment.</p>
+            <p className={`${small} text-slate-500`}>No measurements recorded for this dress.</p>
           )}
         </div>
       ))}

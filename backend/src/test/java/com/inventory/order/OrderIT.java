@@ -27,7 +27,7 @@ class OrderIT extends TailoringIT {
     @BeforeEach
     void setUpShop() throws Exception {
         customer = createCustomer("Hamza Ali", "0300-5550001");
-        shirt = createGarmentType("Shirt", "TOP", "Chest", "Length").get("id").asLong();
+        shirt = createGarmentType("Shirt", "Chest", "Length").get("id").asLong();
         fabric = createFabric("LWN-01", "Lawn", "60", "100", "2");
         stockIn(fabric, "10");
     }
@@ -177,7 +177,7 @@ class OrderIT extends TailoringIT {
 
     @Test
     void measurementsAreCopiedOntoTheOrderLine() throws Exception {
-        JsonNode kurta = createGarmentType("Kurta", "FULL", "Chest", "Length");
+        JsonNode kurta = createGarmentType("Kurta", "Chest", "Length");
         long chest = kurta.get("points").get(0).get("id").asLong();
         long length = kurta.get("points").get(1).get("id").asLong();
         JsonNode record = read(mvc.perform(withJson(post("/api/customers/" + customer + "/measurements"), body(

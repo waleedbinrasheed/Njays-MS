@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { EmptyState, ErrorBanner, PageHeader } from "@/components/ui/Feedback";
 import { PageSpinner } from "@/components/ui/Spinner";
 import { useToast } from "@/components/ui/Toast";
-import { GarmentPictorial } from "@/components/measurements/GarmentPictorial";
+import { DressMeasurements } from "@/components/measurements/DressMeasurements";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { OrderStatusBadge, PaymentStatusBadge } from "@/features/orders/OrderBadges";
 import { useApiQuery } from "@/hooks/useApiQuery";
@@ -126,7 +126,7 @@ export function CustomerDetailPage({ id }: { id: number }) {
         </div>
         {records.error && <ErrorBanner message={records.error} onRetry={records.reload} />}
         {records.data && records.data.length === 0 && (
-          <EmptyState title="No measurements taken yet" description="Take measurements for a garment type before creating an order that needs them." />
+          <EmptyState title="No measurements taken yet" description="Take measurements for a dress type before creating an order that needs them." />
         )}
         {(records.data ?? []).map((r) => (
           <article key={r.id} className="rounded-lg border border-slate-200 bg-white p-4">
@@ -137,7 +137,7 @@ export function CustomerDetailPage({ id }: { id: number }) {
                 {r.notes ? ` · ${r.notes}` : ""}
               </p>
             </div>
-            <GarmentPictorial shape={r.garmentType.shape} measurements={r.values} />
+            <DressMeasurements code={r.garmentType.code} dressName={r.garmentType.name} measurements={r.values} />
           </article>
         ))}
       </section>

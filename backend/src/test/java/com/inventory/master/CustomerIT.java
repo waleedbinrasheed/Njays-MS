@@ -45,7 +45,7 @@ class CustomerIT extends TailoringIT {
     @Test
     void customerWithMeasurementsCannotBeDeletedButCanBeDeactivated() throws Exception {
         long customer = createCustomer("Bilal Ahmed", "0300-0000001");
-        JsonNode type = createGarmentType("Shirt", "TOP", "Chest");
+        JsonNode type = createGarmentType("Shirt", "Chest");
         long pointId = type.get("points").get(0).get("id").asLong();
         mvc.perform(withJson(post("/api/customers/" + customer + "/measurements"), body(
                         "garmentTypeId", type.get("id").asLong(),

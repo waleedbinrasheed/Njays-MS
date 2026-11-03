@@ -29,6 +29,36 @@ const NUMBER = /^\d+(\.\d{1,3})?$/;
 /** Empty optional numbers go out as null; the backend keeps the field unset. */
 const optional = (s: string) => (s.trim() === "" ? null : Number(s));
 
+const HEX_COLOUR = /^#[0-9a-f]{6}$/i;
+
+/** Stores the chosen colour as #rrggbb. A colour typed before the picker existed is shown, not lost. */
+function ColourPicker({ value, onChange, error }: { value: string; onChange: (colour: string) => void; error?: string }) {
+  const isHex = HEX_COLOUR.test(value);
+  return (
+    <fieldset>
+      <legend className="mb-1 text-sm font-medium text-slate-700">Colour</legend>
+      <div className="flex flex-wrap items-center gap-3">
+        <input
+          type="color"
+          aria-label="Pick the fabric colour"
+          value={isHex ? value : "#ffffff"}
+          onChange={(e) => onChange(e.target.value)}
+          className="h-10 w-14 cursor-pointer rounded border border-slate-300 bg-white p-1"
+        />
+        <span className="text-sm text-slate-600">
+          {isHex ? value.toUpperCase() : value ? `Not set (was "${value}")` : "Not set"}
+        </span>
+        {value && (
+          <button type="button" className="text-xs text-blue-700 hover:underline" onClick={() => onChange("")}>
+            Clear
+          </button>
+        )}
+      </div>
+      {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
+    </fieldset>
+  );
+}
+
 function FabricForm({ record, onClose, onSaved }: FormRenderProps<Fabric>) {
   const form = useEntityForm<FabricFormValues, Fabric>({
     initial: {
@@ -89,7 +119,7 @@ function FabricForm({ record, onClose, onSaved }: FormRenderProps<Fabric>) {
         <TextField label="Code" value={v.code} onChange={(e) => set("code", e.target.value)} error={errors.code} required autoFocus />
         <TextField label="Name" value={v.name} onChange={(e) => set("name", e.target.value)} error={errors.name} required />
         <TextField label="Material" value={v.material} onChange={(e) => set("material", e.target.value)} error={errors.material} placeholder="e.g. Cotton" />
-        <TextField label="Colour" value={v.colour} onChange={(e) => set("colour", e.target.value)} error={errors.colour} />
+        <ColourPicker value={v.colour} onChange={(c) => set("colour", c)} error={errors.colour} />
         <TextField label="Pattern" value={v.pattern} onChange={(e) => set("pattern", e.target.value)} error={errors.pattern} placeholder="e.g. Plain, checked" />
         <TextField
           label="Width (inches)"

@@ -44,7 +44,7 @@ export function TakeMeasurementsDialog({ customerId, customerName, onClose, onSa
   async function submit(e: FormEvent) {
     e.preventDefault();
     if (!type) {
-      setErrors({ garment: "Choose the garment type" });
+      setErrors({ garment: "Choose the dress type" });
       return;
     }
     const local: Record<string, string> = {};
@@ -84,7 +84,7 @@ export function TakeMeasurementsDialog({ customerId, customerName, onClose, onSa
       size="lg"
     >
       <AsyncSelect
-        label="Garment type"
+        label="Dress type"
         value={garment}
         onChange={chooseGarment}
         load={loadGarmentTypeOptions}
@@ -93,7 +93,7 @@ export function TakeMeasurementsDialog({ customerId, customerName, onClose, onSa
       />
 
       {type && points.length === 0 && (
-        <p className="text-sm text-amber-700">This garment type has no active measurement points. Add them under Garment Types.</p>
+        <p className="text-sm text-amber-700">This dress type has no active measurement points. Add them under Dress Types.</p>
       )}
 
       {type && points.length > 0 && (

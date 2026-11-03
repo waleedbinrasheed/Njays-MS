@@ -9,7 +9,7 @@ import { SearchInput } from "@/components/ui/FormField";
 import { Modal } from "@/components/ui/Modal";
 import { Pagination } from "@/components/ui/Pagination";
 import { Spinner } from "@/components/ui/Spinner";
-import { GarmentPictorial } from "@/components/measurements/GarmentPictorial";
+import { DressMeasurements } from "@/components/measurements/DressMeasurements";
 import { useApiQuery } from "@/hooks/useApiQuery";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { measurementService } from "@/services/masterDataService";
@@ -60,8 +60,8 @@ export function MeasurementsPage() {
         />
         <div className="sm:w-60">
           <FilterSelect
-            label="Garment type"
-            placeholder="All garment types"
+            label="Dress type"
+            placeholder="All dress types"
             value={garment}
             onChange={(o) => {
               setGarment(o);
@@ -86,7 +86,7 @@ export function MeasurementsPage() {
               <tr>
                 <th scope="col" className="px-4 py-2.5 font-medium">Taken on</th>
                 <th scope="col" className="px-4 py-2.5 font-medium">Customer</th>
-                <th scope="col" className="px-4 py-2.5 font-medium">Garment</th>
+                <th scope="col" className="px-4 py-2.5 font-medium">Dress</th>
                 <th scope="col" className="px-4 py-2.5 font-medium">Notes</th>
                 <th scope="col" className="px-4 py-2.5">
                   <span className="sr-only">Actions</span>
@@ -150,7 +150,7 @@ export function MeasurementsPage() {
               Taken {formatDate(viewing.takenOn)} by {viewing.createdBy}
               {viewing.notes ? ` · ${viewing.notes}` : ""}
             </p>
-            <GarmentPictorial shape={viewing.garmentType.shape} measurements={viewing.values} />
+            <DressMeasurements code={viewing.garmentType.code} dressName={viewing.garmentType.name} measurements={viewing.values} />
           </div>
         )}
       </Modal>

@@ -72,13 +72,13 @@ public abstract class TailoringIT extends ApiTestBase {
     }
 
     /** Points are [label, sortOrder] pairs. */
-    protected JsonNode createGarmentType(String name, String shape, String... labels) throws Exception {
+    protected JsonNode createGarmentType(String name, String... labels) throws Exception {
         List<Map<String, Object>> points = new ArrayList<>();
         for (int i = 0; i < labels.length; i++) {
             points.add(body("label", labels[i], "sortOrder", i + 1, "active", true));
         }
         MvcResult result = mvc.perform(withJson(post("/api/garment-types"), body(
-                        "name", name, "description", null, "shape", shape, "active", true, "points", points))
+                        "name", name, "description", null, "active", true, "points", points))
                         .session(admin))
                 .andExpect(status().isCreated())
                 .andReturn();

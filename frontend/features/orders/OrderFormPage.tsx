@@ -28,6 +28,17 @@ type LineErrors = Partial<Record<"garmentType" | "fabric" | "fabricMetres" | "st
 
 const DECIMAL_3 = /^\d+(\.\d{1,3})?$/;
 
+/** Due and delivery dates default to this many days after the order date. */
+const DAYS_TO_DUE = 15;
+
+/** The yyyy-mm-dd date `days` after an ISO date, computed from local date parts so no time zone shifts it. */
+function addDays(iso: string, days: number): string {
+  const d = new Date(`${iso}T00:00:00`);
+  d.setDate(d.getDate() + days);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
 /** Create (no order given) or edit one order. Edit is offered only while the order is still in production. */
 export function OrderFormPage({ orderId }: { orderId?: number }) {
   const { hasPermission } = useAuth();
@@ -62,9 +73,9 @@ function OrderForm({ order, canAddCustomer }: { order: Order | null; canAddCusto
     order ? { id: order.customer.id, label: order.customer.name, detail: order.customer.phone ?? undefined } : null,
   );
   const [orderDate, setOrderDate] = useState(order?.orderDate ?? todayIso());
-  const [dueDate, setDueDate] = useState(order?.dueDate ?? "");
+  const [dueDate, setDueDate] = useState(order?.dueDate ?? addDays(order?.orderDate ?? todayIso(), DAYS_TO_DUE));
   const [trialDate, setTrialDate] = useState(order?.trialDate ?? "");
-  const [deliveryDate, setDeliveryDate] = useState(order?.deliveryDate ?? "");
+  const [deliveryDate, setDeliveryDate] = useState(order?.deliveryDate ?? addDays(order?.orderDate ?? todayIso(), DAYS_TO_DUE));
   const [notes, setNotes] = useState(order?.notes ?? "");
   const [lines, setLines] = useState<LineDraft[]>(() => (order ? order.lines.map(lineFromSaved) : [emptyLine()]));
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -94,6 +105,14 @@ function OrderForm({ order, canAddCustomer }: { order: Order | null; canAddCusto
     setLines((ls) => ls.map((l) => (l.key === key ? { ...l, ...patch } : l)));
   }
 
+  /** Moves the order date; a due or delivery date still holding its automatic value moves with it. */
+  function changeOrderDate(next: string) {
+    const previousAuto = addDays(orderDate, DAYS_TO_DUE);
+    if (!dueDate || dueDate === previousAuto) setDueDate(next ? addDays(next, DAYS_TO_DUE) : "");
+    if (!deliveryDate || deliveryDate === previousAuto) setDeliveryDate(next ? addDays(next, DAYS_TO_DUE) : "");
+    setOrderDate(next);
+  }
+
   function chooseCustomer(o: Option | null) {
     setCustomer(o);
     // Measurement records belong to one customer, so any choice made for the previous one is cleared.
@@ -107,10 +126,10 @@ function OrderForm({ order, canAddCustomer }: { order: Order | null; canAddCusto
     if (!orderDate) local.orderDate = "Order date is required";
     if (!dueDate) local.dueDate = "Due date is required";
     else if (orderDate && dueDate < orderDate) local.dueDate = "Due date cannot be before the order date";
-    if (lines.length === 0) local.lines = "Add at least one garment";
+    if (lines.length === 0) local.lines = "Add at least one dress";
     for (const l of lines) {
       const e: LineErrors = {};
-      if (!l.garmentType) e.garmentType = "Choose the garment type";
+      if (!l.garmentType) e.garmentType = "Choose the dress type";
       if (l.fabricSource === "STOCK") {
         if (!l.fabric) e.fabric = "Choose the fabric from stock";
         if (!DECIMAL_3.test(l.fabricMetres.trim()) || num(l.fabricMetres) <= 0) e.fabricMetres = "Enter metres above zero, up to 3 decimals";
@@ -157,7 +176,7 @@ function OrderForm({ order, canAddCustomer }: { order: Order | null; canAddCusto
     <>
       <PageHeader
         title={order ? `Edit order ${order.orderNumber}` : "New order"}
-        description="Customer, dates and garments. Totals are recalculated by the server when saved."
+        description="Customer, dates and dresses. Totals are recalculated by the server when saved."
         actions={
           <Link href={order ? `/orders/${order.id}` : "/orders"} className="inline-flex h-9 items-center rounded-md border border-slate-300 bg-white px-4 text-sm font-medium text-slate-700 hover:bg-slate-50">
             Cancel
@@ -192,7 +211,7 @@ function OrderForm({ order, canAddCustomer }: { order: Order | null; canAddCusto
               )}
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <TextField label="Order date" type="date" value={orderDate} onChange={(e) => setOrderDate(e.target.value)} error={errors.orderDate} required />
+              <TextField label="Order date" type="date" value={orderDate} onChange={(e) => changeOrderDate(e.target.value)} error={errors.orderDate} required />
               <TextField label="Due date" type="date" value={dueDate} min={orderDate || undefined} onChange={(e) => setDueDate(e.target.value)} error={errors.dueDate} required />
               <TextField label="Trial date" type="date" value={trialDate} onChange={(e) => setTrialDate(e.target.value)} error={errors.trialDate} />
               <TextField label="Delivery date" type="date" value={deliveryDate} onChange={(e) => setDeliveryDate(e.target.value)} error={errors.deliveryDate} />
@@ -202,7 +221,7 @@ function OrderForm({ order, canAddCustomer }: { order: Order | null; canAddCusto
 
         <section className="space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-slate-900">Garments</h2>
+            <h2 className="text-sm font-semibold text-slate-900">Dresses</h2>
           </div>
           {errors.lines && (
             <p className="text-xs text-red-600" role="alert">
@@ -223,7 +242,7 @@ function OrderForm({ order, canAddCustomer }: { order: Order | null; canAddCusto
             />
           ))}
           <Button variant="secondary" onClick={() => setLines((ls) => [...ls, emptyLine()])}>
-            Add garment
+            Add dress
           </Button>
         </section>
 

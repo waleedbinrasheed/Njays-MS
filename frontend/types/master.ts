@@ -54,8 +54,6 @@ export interface FabricInput {
   version?: number;
 }
 
-export type GarmentShape = "TOP" | "BOTTOM" | "FULL";
-
 export interface GarmentPoint {
   id: number;
   label: string;
@@ -63,11 +61,13 @@ export interface GarmentPoint {
   active: boolean;
 }
 
+/** A dress type. `code` is set only for the five built-in types, which have a reference picture. */
 export interface GarmentType {
   id: number;
   name: string;
+  code: string | null;
   description: string | null;
-  shape: GarmentShape;
+  defaultPrice: number;
   active: boolean;
   version: number;
   inUse: boolean;
@@ -84,7 +84,7 @@ export interface GarmentPointInput {
 export interface GarmentTypeInput {
   name: string;
   description: string;
-  shape: GarmentShape;
+  defaultPrice: number;
   active: boolean;
   points: GarmentPointInput[];
   version?: number;
@@ -101,7 +101,7 @@ export interface MeasurementRecord {
   id: number;
   customerId: number;
   customerName: string;
-  garmentType: { id: number; name: string; shape: GarmentShape };
+  garmentType: { id: number; name: string; code: string | null };
   takenOn: string;
   notes: string | null;
   createdAt: string;

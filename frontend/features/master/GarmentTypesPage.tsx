@@ -5,13 +5,10 @@ import { Button } from "@/components/ui/Button";
 import { Checkbox, TextAreaField, TextField } from "@/components/ui/FormField";
 import { FormDialog } from "@/components/ui/FormDialog";
 import { useEntityForm } from "@/hooks/useEntityForm";
-import { GarmentSilhouette } from "@/components/measurements/GarmentPictorial";
 import { garmentTypeService } from "@/services/masterDataService";
-import type { GarmentShape, GarmentType, GarmentTypeInput } from "@/types/master";
-import { GARMENT_SHAPE_LABELS } from "@/utils/labels";
+import type { GarmentType, GarmentTypeInput } from "@/types/master";
+import { formatCurrency } from "@/utils/format";
 import { EntityListPage, type Column, type FormRenderProps } from "./EntityListPage";
-
-const SHAPES: GarmentShape[] = ["TOP", "BOTTOM", "FULL"];
 
 interface PointRow {
   key: number;
@@ -24,7 +21,7 @@ interface PointRow {
 interface GarmentFormValues {
   name: string;
   description: string;
-  shape: GarmentShape;
+  defaultPrice: string;
   active: boolean;
   points: PointRow[];
   version?: number;
@@ -32,34 +29,8 @@ interface GarmentFormValues {
 
 let nextRowKey = 1;
 
-function shapeSummary(shape: GarmentShape) {
-  return GARMENT_SHAPE_LABELS[shape].split(" (")[0];
-}
-
-/** Pick Top / Bottom / Full by its silhouette, so the choice is visible without reading the words. */
-function ShapePicker({ value, onChange, error }: { value: GarmentShape; onChange: (s: GarmentShape) => void; error?: string }) {
-  return (
-    <fieldset>
-      <legend className="mb-2 text-sm font-medium text-slate-700">Shape</legend>
-      <div className="grid grid-cols-3 gap-2">
-        {SHAPES.map((s) => (
-          <label
-            key={s}
-            className={`flex cursor-pointer flex-col items-center gap-2 rounded-md border p-3 text-center text-xs ${
-              value === s ? "border-blue-500 bg-blue-50 text-blue-800" : "border-slate-300 bg-white text-slate-600 hover:bg-slate-50"
-            }`}
-          >
-            <input type="radio" name="garment-shape" className="sr-only" checked={value === s} onChange={() => onChange(s)} />
-            <GarmentSilhouette shape={s} className="h-16 w-auto" />
-            <span className="font-medium">{shapeSummary(s)}</span>
-          </label>
-        ))}
-      </div>
-      <p className="mt-2 text-xs text-slate-500">{GARMENT_SHAPE_LABELS[value]}</p>
-      {error && <p className="text-xs text-red-600">{error}</p>}
-    </fieldset>
-  );
-}
+/** A price of zero or more with at most two decimals. */
+const PRICE = /^\d+(\.\d{1,2})?$/;
 
 function PointsEditor({
   rows,
@@ -143,7 +114,7 @@ function GarmentTypeForm({ record, onClose, onSaved }: FormRenderProps<GarmentTy
     initial: {
       name: record?.name ?? "",
       description: record?.description ?? "",
-      shape: record?.shape ?? "TOP",
+      defaultPrice: record ? String(record.defaultPrice) : "0",
       active: record?.active ?? true,
       points: (record?.points ?? []).map((p) => ({
         key: nextRowKey++,
@@ -157,6 +128,7 @@ function GarmentTypeForm({ record, onClose, onSaved }: FormRenderProps<GarmentTy
     validate: (v) => {
       const out: Record<string, string> = {
         name: v.name.trim() ? "" : "Name is required",
+        defaultPrice: PRICE.test(v.defaultPrice.trim()) ? "" : "Enter an amount of zero or more, up to 2 decimals",
       };
       for (const p of v.points) {
         if (!p.label.trim()) out[`label-${p.key}`] = "Enter a label for this point";
@@ -167,7 +139,7 @@ function GarmentTypeForm({ record, onClose, onSaved }: FormRenderProps<GarmentTy
       const input: GarmentTypeInput = {
         name: v.name.trim(),
         description: v.description.trim(),
-        shape: v.shape,
+        defaultPrice: Number(v.defaultPrice),
         active: v.active,
         points: v.points.map((p) => ({
           id: p.id,
@@ -185,8 +157,8 @@ function GarmentTypeForm({ record, onClose, onSaved }: FormRenderProps<GarmentTy
 
   return (
     <FormDialog
-      title={record ? "Edit garment type" : "New garment type"}
-      submitLabel={record ? "Save changes" : "Create garment type"}
+      title={record ? "Edit dress type" : "New dress type"}
+      submitLabel={record ? "Save changes" : "Create dress type"}
       saving={form.saving}
       formError={form.formError}
       onSubmit={form.submit}
@@ -195,15 +167,25 @@ function GarmentTypeForm({ record, onClose, onSaved }: FormRenderProps<GarmentTy
     >
       {record?.inUse && (
         <p className="rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-800">
-          This garment type is used on orders or measurement records. Removing a point deactivates it instead of deleting it.
+          This dress type is used on orders or measurement records. Removing a point deactivates it instead of deleting it.
         </p>
       )}
       <div className="grid gap-4 sm:grid-cols-2">
         <TextField label="Name" value={v.name} onChange={(e) => set("name", e.target.value)} error={errors.name} required autoFocus />
         <Checkbox label="Active" description="Inactive types cannot be chosen for new orders." checked={v.active} onChange={(e) => set("active", e.target.checked)} />
+        <TextField
+          label="Default price (PKR)"
+          type="number"
+          inputMode="decimal"
+          min="0"
+          step="0.01"
+          hint="Filled into the stitching charge when this dress is chosen on an order. The order can change it."
+          value={v.defaultPrice}
+          onChange={(e) => set("defaultPrice", e.target.value)}
+          error={errors.defaultPrice}
+        />
       </div>
       <TextAreaField label="Description" rows={2} value={v.description} onChange={(e) => set("description", e.target.value)} error={errors.description} />
-      <ShapePicker value={v.shape} onChange={(s) => set("shape", s)} error={errors.shape} />
       <PointsEditor rows={v.points} onChange={(rows) => set("points", rows)} errors={errors} />
     </FormDialog>
   );
@@ -211,7 +193,7 @@ function GarmentTypeForm({ record, onClose, onSaved }: FormRenderProps<GarmentTy
 
 const COLUMNS: Column<GarmentType>[] = [
   { header: "Name", sortField: "name", render: (g) => <span className="font-medium text-slate-900">{g.name}</span> },
-  { header: "Shape", render: (g) => shapeSummary(g.shape) },
+  { header: "Default price", className: "text-right tabular-nums", render: (g) => formatCurrency(g.defaultPrice) },
   { header: "Points", className: "text-right tabular-nums", render: (g) => g.points.filter((p) => p.active).length },
   { header: "Description", render: (g) => g.description ?? "-" },
   { header: "In use", render: (g) => (g.inUse ? <Badge tone="blue">In use</Badge> : "-") },
@@ -220,14 +202,14 @@ const COLUMNS: Column<GarmentType>[] = [
 export function GarmentTypesPage() {
   return (
     <EntityListPage<GarmentType>
-      title="Garment types"
-      description="Kinds of garment the shop makes, with the measurement points taken for each."
-      noun="garment type"
+      title="Dress types"
+      description="Kinds of dress the shop makes, with the default price and the measurement points taken for each."
+      noun="dress type"
       list={garmentTypeService.list}
       remove={garmentTypeService.remove}
       columns={COLUMNS}
       defaultSort={{ field: "name", direction: "asc" }}
-      searchPlaceholder="Search garment types"
+      searchPlaceholder="Search dress types"
       displayName={(g) => g.name}
       canDelete={(g) => !g.inUse}
       renderForm={(props) => <GarmentTypeForm {...props} />}

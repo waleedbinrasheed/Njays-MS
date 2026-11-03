@@ -28,7 +28,7 @@ public final class MeasurementDtos {
 
     /** {@code takenOn} defaults to today (shop time); it cannot be in the future. */
     public record MeasurementRequest(
-            @NotNull(message = "Garment type is required") Long garmentTypeId,
+            @NotNull(message = "Dress type is required") Long garmentTypeId,
             LocalDate takenOn,
             @Size(max = 500) String notes,
             @Valid @NotNull(message = "Enter at least one measurement")

@@ -20,6 +20,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -78,12 +79,13 @@ public class GarmentTypeService {
         }
         List<PointRequest> incoming = request.points() == null ? List.of() : request.points();
         if (incoming.stream().anyMatch(p -> p.id() != null)) {
-            throw new BusinessException("Unknown measurement point: save the garment type first");
+            throw new BusinessException("Unknown measurement point: save the dress type first");
         }
         checkLabels(incoming);
 
-        GarmentType type = new GarmentType(name, request.shape());
+        GarmentType type = new GarmentType(name);
         type.setDescription(trimToNull(request.description()));
+        type.setDefaultPrice(priceOf(request));
         type.setActive(request.active() == null || request.active());
         types.save(type);
         for (PointRequest p : incoming) {
@@ -169,7 +171,7 @@ public class GarmentTypeService {
 
         type.setName(name);
         type.setDescription(trimToNull(request.description()));
-        type.setShape(request.shape());
+        type.setDefaultPrice(priceOf(request));
         type.setActive(request.active() == null || request.active());
         types.saveAndFlush(type);
         points.flush();
@@ -180,7 +182,7 @@ public class GarmentTypeService {
     @Transactional
     public void delete(Long id) {
         GarmentType type = load(id);
-        String label = "Garment type '" + type.getName() + "'";
+        String label = "Dress type '" + type.getName() + "'";
         if (inUseByRecords(id)) {
             throw inUse(label);
         }
@@ -211,11 +213,16 @@ public class GarmentTypeService {
         }
     }
 
+    /** A missing price means no default: the order line starts at zero. */
+    private static BigDecimal priceOf(GarmentTypeRequest request) {
+        return request.defaultPrice() == null ? BigDecimal.ZERO : request.defaultPrice();
+    }
+
     private GarmentType load(Long id) {
-        return types.findById(id).orElseThrow(() -> new ResourceNotFoundException("Garment type", id));
+        return types.findById(id).orElseThrow(() -> new ResourceNotFoundException("Dress type", id));
     }
 
     private static BusinessException duplicateName(String name) {
-        return new BusinessException(HttpStatus.CONFLICT, "A garment type named '" + name + "' already exists");
+        return new BusinessException(HttpStatus.CONFLICT, "A dress type named '" + name + "' already exists");
     }
 }

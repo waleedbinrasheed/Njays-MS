@@ -1,4 +1,3 @@
-import type { GarmentShape } from "@/types/master";
 
 export type OrderStatus = "RECEIVED" | "CUTTING" | "STITCHING" | "TRIAL" | "READY" | "DELIVERED" | "CANCELLED";
 
@@ -33,7 +32,7 @@ export interface OrderLineMeasurement {
 export interface OrderLine {
   id: number;
   lineNo: number;
-  garmentType: { id: number; name: string; shape: GarmentShape };
+  garmentType: { id: number; name: string; code: string | null };
   fabricSource: FabricSource;
   fabric: { id: number; code: string; name: string; colour: string | null } | null;
   fabricMetres: number | null;

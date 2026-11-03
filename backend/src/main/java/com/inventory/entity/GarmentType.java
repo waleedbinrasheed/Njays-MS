@@ -2,10 +2,14 @@ package com.inventory.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.Table;
 
+import java.math.BigDecimal;
+
+/**
+ * A dress type (Shalwar Kameez, Waistcoat, ...). {@code code} identifies the five built-in types, whose
+ * reference pictures the frontend shows; user-added types have no code and no picture.
+ */
 @Entity
 @Table(name = "garment_type")
 public class GarmentType extends AuditableEntity {
@@ -13,12 +17,15 @@ public class GarmentType extends AuditableEntity {
     @Column(nullable = false, length = 80)
     private String name;
 
+    @Column(length = 30)
+    private String code;
+
     @Column(length = 255)
     private String description;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 10)
-    private GarmentShape shape;
+    /** Stitching charge copied into a new order line when this dress is chosen; the order can change it. */
+    @Column(name = "default_price", nullable = false, precision = 12, scale = 2)
+    private BigDecimal defaultPrice = BigDecimal.ZERO;
 
     @Column(nullable = false)
     private boolean active = true;
@@ -26,9 +33,8 @@ public class GarmentType extends AuditableEntity {
     protected GarmentType() {
     }
 
-    public GarmentType(String name, GarmentShape shape) {
+    public GarmentType(String name) {
         this.name = name;
-        this.shape = shape;
     }
 
     public String getName() {
@@ -39,6 +45,10 @@ public class GarmentType extends AuditableEntity {
         this.name = name;
     }
 
+    public String getCode() {
+        return code;
+    }
+
     public String getDescription() {
         return description;
     }
@@ -47,12 +57,12 @@ public class GarmentType extends AuditableEntity {
         this.description = description;
     }
 
-    public GarmentShape getShape() {
-        return shape;
+    public BigDecimal getDefaultPrice() {
+        return defaultPrice;
     }
 
-    public void setShape(GarmentShape shape) {
-        this.shape = shape;
+    public void setDefaultPrice(BigDecimal defaultPrice) {
+        this.defaultPrice = defaultPrice;
     }
 
     public boolean isActive() {

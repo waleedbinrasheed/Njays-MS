@@ -1,5 +1,4 @@
 import type { AdjustmentReason, TransactionType } from "@/types/inventory";
-import type { GarmentShape } from "@/types/master";
 import type { CalendarDateType, FabricSource, OrderStatus, PaymentKind, PaymentMethod, PaymentStatus } from "@/types/order";
 
 export const ORDER_STATUSES: OrderStatus[] = ["RECEIVED", "CUTTING", "STITCHING", "TRIAL", "READY", "DELIVERED", "CANCELLED"];
@@ -41,12 +40,6 @@ export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
 export const FABRIC_SOURCE_LABELS: Record<FabricSource, string> = {
   STOCK: "From stock",
   CUSTOMER: "Customer's own fabric",
-};
-
-export const GARMENT_SHAPE_LABELS: Record<GarmentShape, string> = {
-  TOP: "Top (shirt, kurta, coat)",
-  BOTTOM: "Bottom (trousers, shalwar)",
-  FULL: "Full (dress, suit)",
 };
 
 export const CALENDAR_DATE_LABELS: Record<CalendarDateType, string> = {

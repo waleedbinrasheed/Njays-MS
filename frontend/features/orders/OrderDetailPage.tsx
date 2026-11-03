@@ -7,7 +7,7 @@ import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { EmptyState, ErrorBanner, PageHeader } from "@/components/ui/Feedback";
 import { PageSpinner } from "@/components/ui/Spinner";
 import { useToast } from "@/components/ui/Toast";
-import { GarmentPictorial } from "@/components/measurements/GarmentPictorial";
+import { DressMeasurements } from "@/components/measurements/DressMeasurements";
 import { CancelDocumentDialog } from "@/features/documents/CancelDocumentDialog";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { useApiQuery } from "@/hooks/useApiQuery";
@@ -160,7 +160,7 @@ export function OrderDetailPage({ id }: { id: number }) {
       </div>
 
       <section className="mt-5 overflow-hidden rounded-lg border border-slate-200 bg-white">
-        <h2 className="border-b border-slate-200 px-4 py-3 text-sm font-semibold text-slate-900">Garments</h2>
+        <h2 className="border-b border-slate-200 px-4 py-3 text-sm font-semibold text-slate-900">Dresses</h2>
         <div className="divide-y divide-slate-100">
           {o.lines.map((l) => (
             <article key={l.id} className="space-y-3 p-4">
@@ -170,7 +170,7 @@ export function OrderDetailPage({ id }: { id: number }) {
                 </h3>
                 <span className="text-sm tabular-nums text-slate-700">{formatCurrency(l.lineTotal)}</span>
               </div>
-              <dl className="grid gap-x-4 gap-y-1 text-sm sm:grid-cols-2">
+              <dl className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
                 <Field label="Fabric" value={FABRIC_SOURCE_LABELS[l.fabricSource]} />
                 {l.fabricSource === "STOCK" ? (
                   <Field
@@ -185,11 +185,11 @@ export function OrderDetailPage({ id }: { id: number }) {
                   <Field label="Customer's fabric" value={l.customerFabricNote ?? "-"} />
                 )}
                 <Field label="Stitching" value={formatCurrency(l.stitchingCharge)} />
-                {l.notes && <Field label="Notes" value={l.notes} />}
               </dl>
+              {l.notes && <p className="text-sm text-slate-700">Note: {l.notes}</p>}
               {l.measurements.length > 0 && (
                 <div className="rounded-md bg-slate-50 p-3">
-                  <GarmentPictorial shape={l.garmentType.shape} measurements={l.measurements} />
+                  <DressMeasurements code={l.garmentType.code} dressName={l.garmentType.name} measurements={l.measurements} />
                 </div>
               )}
             </article>

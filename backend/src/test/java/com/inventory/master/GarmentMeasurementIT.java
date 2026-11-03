@@ -20,7 +20,7 @@ class GarmentMeasurementIT extends TailoringIT {
 
     @Test
     void usedPointsAreDeactivatedAndUnusedPointsAreDeleted() throws Exception {
-        JsonNode trouser = createGarmentType("Trouser", "BOTTOM", "Waist", "Hip", "Inseam");
+        JsonNode trouser = createGarmentType("Trouser", "Waist", "Hip", "Inseam");
         long customer = createCustomer("Ahmed Raza", "0300-0000010");
         long waist = pointNamed(trouser, "Waist").get("id").asLong();
         long hip = pointNamed(trouser, "Hip").get("id").asLong();
@@ -29,7 +29,7 @@ class GarmentMeasurementIT extends TailoringIT {
         // Keep Waist, drop Hip (used by a record) and Inseam (never used).
         long version = trouser.get("version").asLong();
         JsonNode updated = read(mvc.perform(withJson(put("/api/garment-types/" + trouser.get("id").asLong()), body(
-                        "name", "Trouser", "description", null, "shape", "BOTTOM", "active", true, "version", version,
+                        "name", "Trouser", "description", null, "active", true, "version", version,
                         "points", List.of(body("id", waist, "label", "Waist", "sortOrder", 1, "active", true))))
                         .session(admin))
                 .andExpect(status().isOk())
@@ -43,8 +43,8 @@ class GarmentMeasurementIT extends TailoringIT {
 
     @Test
     void measurementUsesOnlyActivePointsOfItsGarmentType() throws Exception {
-        JsonNode shirt = createGarmentType("Shirt", "TOP", "Chest", "Sleeve");
-        JsonNode trouser = createGarmentType("Trouser", "BOTTOM", "Waist");
+        JsonNode shirt = createGarmentType("Shirt", "Chest", "Sleeve");
+        JsonNode trouser = createGarmentType("Trouser", "Waist");
         long customer = createCustomer("Farhan Ali", "0300-0000011");
         long chest = pointNamed(shirt, "Chest").get("id").asLong();
         long sleeve = pointNamed(shirt, "Sleeve").get("id").asLong();
@@ -69,7 +69,7 @@ class GarmentMeasurementIT extends TailoringIT {
 
         // A deactivated point is hidden from new measurements.
         mvc.perform(withJson(put("/api/garment-types/" + shirt.get("id").asLong()), body(
-                        "name", "Shirt", "shape", "TOP", "active", true, "version", shirt.get("version").asLong(),
+                        "name", "Shirt", "active", true, "version", shirt.get("version").asLong(),
                         "points", List.of(
                                 body("id", chest, "label", "Chest", "sortOrder", 1, "active", false),
                                 body("id", sleeve, "label", "Sleeve", "sortOrder", 2, "active", true))))
@@ -84,7 +84,7 @@ class GarmentMeasurementIT extends TailoringIT {
 
     @Test
     void measurementRecordsAreNeverEditedOrDeleted() throws Exception {
-        JsonNode shirt = createGarmentType("Kameez", "FULL", "Length");
+        JsonNode shirt = createGarmentType("Kameez", "Length");
         long customer = createCustomer("Usman Tariq", "0300-0000012");
         JsonNode record = takeMeasurement(customer, shirt.get("id").asLong(),
                 Map.of(pointNamed(shirt, "Length").get("id").asLong(), "44"));
@@ -98,7 +98,7 @@ class GarmentMeasurementIT extends TailoringIT {
 
     @Test
     void garmentTypeInUseCannotBeDeleted() throws Exception {
-        JsonNode shirt = createGarmentType("Kurta", "TOP", "Chest");
+        JsonNode shirt = createGarmentType("Kurta", "Chest");
         long customer = createCustomer("Zain Abbas", "0300-0000013");
         takeMeasurement(customer, shirt.get("id").asLong(), Map.of(pointNamed(shirt, "Chest").get("id").asLong(), "42"));
 

@@ -36,7 +36,7 @@ public final class MasterDataMapper {
     }
 
     public static GarmentRef garmentRef(GarmentType g) {
-        return new GarmentRef(g.getId(), g.getName(), g.getShape());
+        return new GarmentRef(g.getId(), g.getName(), g.getCode());
     }
 
     public static PointResponse toResponse(GarmentMeasurementPoint p) {
@@ -44,7 +44,7 @@ public final class MasterDataMapper {
     }
 
     public static GarmentTypeResponse toResponse(GarmentType g, List<GarmentMeasurementPoint> points, boolean inUse) {
-        return new GarmentTypeResponse(g.getId(), g.getName(), g.getDescription(), g.getShape(), g.isActive(),
+        return new GarmentTypeResponse(g.getId(), g.getName(), g.getCode(), g.getDescription(), g.getDefaultPrice(), g.isActive(),
                 g.getVersion(), points.stream().map(MasterDataMapper::toResponse).toList(), inUse);
     }
 

@@ -26,7 +26,7 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { label: "Customers", href: "/master/customers", permission: "MASTER_DATA_VIEW" },
       { label: "Fabrics", href: "/master/fabrics", permission: "MASTER_DATA_VIEW" },
-      { label: "Garment Types", href: "/master/garment-types", permission: "MASTER_DATA_VIEW" },
+      { label: "Dress Types", href: "/master/garment-types", permission: "MASTER_DATA_VIEW" },
       { label: "Measurements", href: "/master/measurements", permission: "MASTER_DATA_VIEW" },
     ],
   },
