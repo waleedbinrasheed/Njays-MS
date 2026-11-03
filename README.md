@@ -56,7 +56,7 @@ Printed purchase and sales invoices show your shop's name and contact details. S
 ```yaml
 app:
   business:
-    name: Leading Publishers
+    name: Njays
     address: "Shop 12, Main Market, Lahore"
     phone: "042-1234567"
     email: shop@example.com
