@@ -39,7 +39,7 @@ export interface StockTransaction {
 
 export interface StockAdjustmentInput {
   productId: number;
-  change: number;
+  adjustmentQuantity: number;
   reason: AdjustmentReason;
   expectedCurrentQuantity: number;
   notes: string;

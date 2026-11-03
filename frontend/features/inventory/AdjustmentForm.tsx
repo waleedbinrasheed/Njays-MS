@@ -73,7 +73,7 @@ export function AdjustmentForm({ initialProduct = null, onDone, onCancel }: Adju
     try {
       const result = await inventoryService.adjust({
         productId: product.id,
-        change,
+        adjustmentQuantity: change,
         reason,
         expectedCurrentQuantity: current,
         notes,
