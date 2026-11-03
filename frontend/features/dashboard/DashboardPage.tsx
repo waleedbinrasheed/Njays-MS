@@ -59,6 +59,14 @@ export function DashboardPage() {
         {d.outstandingBalance !== null && (
           <StatTile label="Outstanding balance" value={formatCurrency(d.outstandingBalance)} href={canOrders ? "/reports/orders" : undefined} />
         )}
+        {d.lowStockFabrics !== null && (
+          <StatTile
+            label="Fabrics to reorder"
+            value={compactNumber(d.lowStockFabrics)}
+            status={d.lowStockFabrics > 0 ? { tone: "warning", text: "Below reorder level" } : undefined}
+            href={hasPermission("INVENTORY_VIEW") ? "/inventory" : undefined}
+          />
+        )}
         {d.inProgress &&
           IN_PROGRESS.map((s) => (
             <StatTile key={s} label={ORDER_STATUS_LABELS[s]} value={compactNumber(d.inProgress?.[s] ?? 0)} detail="orders" href={canOrders ? "/orders" : undefined} />
@@ -90,38 +98,6 @@ export function DashboardPage() {
           </Panel>
         )}
 
-        {d.lowStockFabrics && (
-          <Panel title="Fabrics to reorder" action={hasPermission("INVENTORY_VIEW") ? <Link href="/inventory">Fabric stock</Link> : null}>
-            {d.lowStockFabrics.length === 0 ? (
-              <EmptyState title="Nothing is below its reorder level" />
-            ) : (
-              <table className="min-w-full text-sm">
-                <thead className="text-left text-xs uppercase tracking-wide text-slate-500">
-                  <tr>
-                    <th className="py-2 pr-2 font-medium">Fabric</th>
-                    <th className="py-2 pr-2 text-right font-medium">On hand (m)</th>
-                    <th className="py-2 text-right font-medium">Reorder at (m)</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {d.lowStockFabrics.map((f) => (
-                    <tr key={f.productId}>
-                      <td className="py-2 pr-2">
-                        {f.name} <span className="font-mono text-xs text-slate-500">{f.code}</span>
-                      </td>
-                      <td className="py-2 pr-2 text-right tabular-nums">
-                        <span className={f.quantityOnHand <= 0 ? "font-medium text-red-600" : "font-medium text-amber-700"}>
-                          {f.quantityOnHand.toFixed(3)}
-                        </span>
-                      </td>
-                      <td className="py-2 text-right tabular-nums text-slate-600">{f.reorderLevel.toFixed(3)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </Panel>
-        )}
       </div>
     </>
   );

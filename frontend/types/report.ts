@@ -9,7 +9,7 @@ export interface Dashboard {
   outstandingBalance: number | null;
   ordersToday: number | null;
   recentOrders: { id: number; orderNumber: string; customerName: string; status: OrderStatus; dueDate: string }[] | null;
-  lowStockFabrics: { productId: number; code: string; name: string; quantityOnHand: number; reorderLevel: number }[] | null;
+  lowStockFabrics: number | null;
 }
 
 export interface OrderReportRow {
