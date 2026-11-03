@@ -91,7 +91,7 @@ cd frontend && npm run lint && npm run typecheck && npm run build
 | `DB_HOST` / `DB_PORT` / `DB_NAME` | `localhost` / `5432` / `inventory` | Database location |
 | `DB_USERNAME` / `DB_PASSWORD` | `inventory_app` / — | Database login |
 | `APP_TIMEZONE` | `Asia/Karachi` | "Today", months and date filters |
-| `BUSINESS_NAME` (and `_ADDRESS`, `_PHONE`, `_EMAIL`) | `Leading Publishers` | Invoice header |
+| `BUSINESS_NAME` (and `_ADDRESS`, `_PHONE`, `_EMAIL`) | `Njay's Tailoring` | Invoice header |
 | `SESSION_TIMEOUT` | `30m` | Inactivity logout (e.g. `15m`, `1h`) |
 | `ADMIN_INITIAL_PASSWORD` | random | Temporary password for the first `admin` (empty database only) |
 | `SERVER_ADDRESS` / `SERVER_PORT` | `127.0.0.1` / `8080` | Backend bind (keep on localhost) |

@@ -4,7 +4,7 @@ import { LoginForm } from "@/features/auth/LoginForm";
 
 export default function LoginPage() {
   return (
-    <AuthCard title="Sign in" subtitle="Inventory Management System">
+    <AuthCard title="Sign in" subtitle="Tailoring Management System">
       <Suspense>
         <LoginForm />
       </Suspense>

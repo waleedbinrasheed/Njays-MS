@@ -3,7 +3,7 @@ import { Providers } from "@/components/Providers";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Leading Publishers · Inventory",
+  title: "Njay's Tailoring · Management",
   description: "Tailoring shop orders, customers, measurements and fabric stock",
 };
 

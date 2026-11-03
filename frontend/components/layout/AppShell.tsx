@@ -80,7 +80,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             <BrandLogo className="h-10 w-auto" />
             <span className="leading-tight">
               <span className="block text-sm font-semibold text-slate-900">{BRAND_NAME}</span>
-              <span className="block text-xs text-slate-500">Inventory Management</span>
+              <span className="block text-xs text-slate-500">Tailoring Management</span>
             </span>
           </Link>
         </div>

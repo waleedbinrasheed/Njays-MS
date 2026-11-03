@@ -59,7 +59,7 @@ app:
   timezone: ${APP_TIMEZONE:Asia/Karachi}
   # Printed at the top of purchase and sales invoices. Override in application-local.yml.
   business:
-    name: ${BUSINESS_NAME:Leading Publishers}
+    name: ${BUSINESS_NAME:Njay's Tailoring}
     address: ${BUSINESS_ADDRESS:}
     phone: ${BUSINESS_PHONE:}
     email: ${BUSINESS_EMAIL:}

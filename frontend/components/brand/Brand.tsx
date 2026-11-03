@@ -1,10 +1,10 @@
 import Image from "next/image";
-import logo from "@/assets/logo.png";
+import logo from "@/assets/logo.jpg";
 
-export const BRAND_NAME = "Leading Publishers";
+export const BRAND_NAME = "Njay's Tailoring";
 
 /**
- * The Leading Publishers logo. Loaded eagerly so it is always present when a page is printed
+ * The shop logo. Loaded eagerly so it is always present when a page is printed
  * (lazy images that are off-screen may be missing from the printout).
  * Served as-is (25 KB) so it never depends on the image optimizer, e.g. on an offline LAN server.
  */
