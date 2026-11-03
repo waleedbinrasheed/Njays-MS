@@ -5,7 +5,7 @@
 services:
   # Spring Boot API. Only reached through the frontend's /api proxy.
   - type: web
-    name: leadingims-api
+    name: njays-api
     runtime: node            # any native runtime works; the build script downloads JDK 21 itself
     plan: free
     region: singapore
@@ -33,7 +33,7 @@ services:
 
   # Next.js frontend: the URL you give the client.
   - type: web
-    name: leadingims-web
+    name: njays-web
     runtime: node
     plan: free
     region: singapore
