@@ -14,16 +14,11 @@ export interface InventoryRow {
   name: string;
   material: string | null;
   colour: string | null;
-  pattern: string | null;
-  width: number | null;
-  costPerMetre: number;
-  pricePerMetre: number;
-  active: boolean;
-  quantityOnHand: number;
+  quantity: number;
   reorderLevel: number;
-  lowStock: boolean;
-  costValue: number;
-  version: number;
+  stockLevel: "OUT_OF_STOCK" | "LOW" | "OK";
+  active: boolean;
+  updatedAt: string;
 }
 
 export interface StockTransaction {

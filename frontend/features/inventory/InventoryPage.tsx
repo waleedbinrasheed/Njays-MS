@@ -14,7 +14,6 @@ import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { ApiError } from "@/services/apiClient";
 import { inventoryService } from "@/services/inventoryService";
 import type { InventoryRow } from "@/types/inventory";
-import { formatCurrency } from "@/utils/format";
 
 const PAGE_SIZE = 25;
 
@@ -31,7 +30,7 @@ export function InventoryPage() {
   const debouncedSearch = useDebouncedValue(search);
 
   const list = useApiQuery(
-    (signal) => inventoryService.list({ search: debouncedSearch, lowStockOnly: lowOnly || undefined, page, size: PAGE_SIZE, sort: "code,asc" }, signal),
+    (signal) => inventoryService.list({ search: debouncedSearch, status: lowOnly ? "LOW" : undefined, page, size: PAGE_SIZE, sort: "code,asc" }, signal),
     [debouncedSearch, lowOnly, page, refreshKey],
   );
   const rows = list.data?.content ?? [];
@@ -90,7 +89,6 @@ export function InventoryPage() {
                 <th scope="col" className="px-4 py-2.5 font-medium">Fabric</th>
                 <th scope="col" className="px-4 py-2.5 text-right font-medium">On hand (m)</th>
                 <th scope="col" className="px-4 py-2.5 text-right font-medium">Reorder at (m)</th>
-                <th scope="col" className="px-4 py-2.5 text-right font-medium">Cost value</th>
                 <th scope="col" className="px-4 py-2.5">
                   <span className="sr-only">Actions</span>
                 </th>
@@ -105,8 +103,12 @@ export function InventoryPage() {
                     <div className="text-xs text-slate-500">{[r.colour, r.material].filter(Boolean).join(" · ") || "-"}</div>
                   </td>
                   <td className="whitespace-nowrap px-4 py-2.5 text-right tabular-nums">
-                    {r.quantityOnHand.toFixed(3)}{" "}
-                    {r.quantityOnHand <= 0 ? <Badge tone="red">Out</Badge> : r.lowStock ? <Badge tone="amber">Low</Badge> : null}
+                    {r.quantity.toFixed(3)}{" "}
+                    {r.stockLevel === "OUT_OF_STOCK" ? (
+                      <Badge tone="red">Out</Badge>
+                    ) : r.stockLevel === "LOW" ? (
+                      <Badge tone="amber">Low</Badge>
+                    ) : null}
                   </td>
                   <td className="whitespace-nowrap px-4 py-2.5 text-right tabular-nums">
                     {r.reorderLevel.toFixed(3)}
@@ -116,7 +118,6 @@ export function InventoryPage() {
                       </button>
                     )}
                   </td>
-                  <td className="whitespace-nowrap px-4 py-2.5 text-right tabular-nums">{formatCurrency(r.costValue)}</td>
                   <td className="whitespace-nowrap px-4 py-2.5 text-right text-sm">
                     <Link href={`/inventory/movements?productId=${r.productId}`} className="text-blue-700 hover:underline">
                       History
@@ -181,7 +182,7 @@ function ReorderLevelDialog({ row, onClose, onSaved }: { row: InventoryRow; onCl
     }
     setSaving(true);
     try {
-      await inventoryService.setReorderLevel(row.productId, value, row.version);
+      await inventoryService.setReorderLevel(row.productId, value);
       onSaved();
     } catch (err) {
       setFormError(err instanceof ApiError ? err.message : "Could not save the reorder level");
