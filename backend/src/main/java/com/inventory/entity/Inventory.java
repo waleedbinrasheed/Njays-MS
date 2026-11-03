@@ -11,11 +11,12 @@ import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.Version;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 
 /**
- * Current stock of one product. Only {@code InventoryService} may change {@link #quantity}; it always
- * records a {@link StockTransaction} in the same database transaction.
+ * Current stock of one product, in metres for fabrics (3 decimal places). Only {@code InventoryService}
+ * may change {@link #quantity}; it always records a {@link StockTransaction} in the same transaction.
  */
 @Entity
 @Table(name = "inventory")
@@ -29,11 +30,11 @@ public class Inventory {
     @JoinColumn(name = "product_id", nullable = false, updatable = false, unique = true)
     private Product product;
 
-    @Column(nullable = false)
-    private int quantity;
+    @Column(nullable = false, precision = 12, scale = 3)
+    private BigDecimal quantity = BigDecimal.ZERO;
 
-    @Column(name = "reorder_level", nullable = false)
-    private int reorderLevel;
+    @Column(name = "reorder_level", nullable = false, precision = 12, scale = 3)
+    private BigDecimal reorderLevel = BigDecimal.ZERO;
 
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
@@ -58,11 +59,11 @@ public class Inventory {
         return product;
     }
 
-    public int getQuantity() {
+    public BigDecimal getQuantity() {
         return quantity;
     }
 
-    public int getReorderLevel() {
+    public BigDecimal getReorderLevel() {
         return reorderLevel;
     }
 
@@ -74,18 +75,19 @@ public class Inventory {
         return version;
     }
 
+    /** Low stock: quantity at or below the reorder level (out of stock included). */
     public boolean isLowStock() {
-        return quantity <= reorderLevel;
+        return quantity.compareTo(reorderLevel) <= 0;
     }
 
-    public void changeReorderLevel(int reorderLevel, Instant now) {
+    public void changeReorderLevel(BigDecimal reorderLevel, Instant now) {
         this.reorderLevel = reorderLevel;
         this.updatedAt = now;
     }
 
     /** Called only by InventoryService after validation, in the same transaction as the ledger insert. */
-    public void applyQuantityChange(int change, Instant now) {
-        this.quantity += change;
+    public void applyQuantityChange(BigDecimal change, Instant now) {
+        this.quantity = this.quantity.add(change);
         this.updatedAt = now;
     }
 }

@@ -40,20 +40,6 @@ public abstract class ApiTestBase {
     @Autowired
     protected TestUsers testUsers;
 
-    @Autowired
-    private org.springframework.jdbc.core.JdbcTemplate baseJdbc;
-
-    /** The built-in "Counter Sales" representative. */
-    protected long counterRepresentativeId() {
-        return baseJdbc.queryForObject("select id from representative where built_in", Long.class);
-    }
-
-    /** The representative a customer belongs to, or the counter representative when no customer is given. */
-    protected long representativeFor(Long customerId) {
-        if (customerId == null) return counterRepresentativeId();
-        return baseJdbc.queryForObject("select representative_id from customer where id = ?", Long.class, customerId);
-    }
-
     protected MockHttpSession login(String username, String password) throws Exception {
         MvcResult result = mvc.perform(post("/api/auth/login").with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)

@@ -7,14 +7,20 @@ import com.inventory.entity.Customer;
 import com.inventory.exception.BusinessException;
 import com.inventory.exception.ResourceNotFoundException;
 import com.inventory.mapper.MasterDataMapper;
-import com.inventory.entity.Representative;
+import com.inventory.repository.CustomerOrderRepository;
 import com.inventory.repository.CustomerRepository;
-import com.inventory.repository.RepresentativeRepository;
-import com.inventory.repository.SaleRepository;
-import com.inventory.repository.SampleIssueRepository;
+import com.inventory.repository.MeasurementRecordRepository;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 
 import static com.inventory.service.MasterDataSupport.checkVersion;
 import static com.inventory.service.MasterDataSupport.deleteIfUnused;
@@ -22,103 +28,107 @@ import static com.inventory.service.MasterDataSupport.inUse;
 import static com.inventory.service.MasterDataSupport.searchTerm;
 import static com.inventory.service.MasterDataSupport.trimToNull;
 
+/**
+ * Customers are people who order garments. Walk-in rows from the book shop are invisible here.
+ * Two active customers may not share both name and phone; a customer with orders or measurements
+ * cannot be deleted (deactivate instead).
+ */
 @Service
 public class CustomerService {
 
     private final CustomerRepository customers;
-    private final SaleRepository sales;
-    private final SampleIssueRepository samples;
-    private final RepresentativeRepository representatives;
+    private final CustomerOrderRepository orders;
+    private final MeasurementRecordRepository measurements;
 
-    public CustomerService(CustomerRepository customers, SaleRepository sales, SampleIssueRepository samples,
-                           RepresentativeRepository representatives) {
+    public CustomerService(CustomerRepository customers, CustomerOrderRepository orders,
+                           MeasurementRecordRepository measurements) {
         this.customers = customers;
-        this.sales = sales;
-        this.samples = samples;
-        this.representatives = representatives;
+        this.orders = orders;
+        this.measurements = measurements;
     }
 
     @Transactional(readOnly = true)
-    public PageResponse<CustomerResponse> search(String search, Boolean active, Long representativeId, boolean unassigned,
-                                                 Pageable pageable) {
-        return PageResponse.of(customers.search(searchTerm(search), active, representativeId, unassigned, pageable),
-                MasterDataMapper::toResponse);
+    public PageResponse<CustomerResponse> search(String search, Boolean active, Pageable pageable) {
+        Page<Customer> page = customers.search(searchTerm(search), active, pageable);
+        Map<Long, Long> counts = orderCounts(page.getContent());
+        return PageResponse.of(page, c -> MasterDataMapper.toResponse(c, counts.getOrDefault(c.getId(), 0L)));
     }
 
     @Transactional(readOnly = true)
     public CustomerResponse get(Long id) {
-        return MasterDataMapper.toResponse(load(id));
-    }
-
-    /** The default customer preselected on new sales. */
-    @Transactional(readOnly = true)
-    public CustomerResponse walkIn() {
-        return customers.findByWalkInTrue()
-                .map(MasterDataMapper::toResponse)
-                .orElseThrow(() -> new IllegalStateException("Walk-in customer missing; check migrations"));
+        Customer customer = load(id);
+        return MasterDataMapper.toResponse(customer, orders.countByCustomerId(id));
     }
 
     @Transactional
     public CustomerResponse create(CustomerRequest request) {
+        String name = request.name().trim();
+        String phone = trimToNull(request.phone());
+        boolean active = request.active() == null || request.active();
+        if (active) {
+            checkNoDuplicate(name, phone, null);
+        }
         Customer customer = new Customer();
-        customer.setRepresentative(resolveRepresentative(request.representativeId(), null));
-        apply(customer, request);
-        return MasterDataMapper.toResponse(customers.save(customer));
+        customer.setName(name);
+        customer.setPhone(phone);
+        customer.setEmail(trimToNull(request.email()));
+        customer.setAddress(trimToNull(request.address()));
+        customer.setActive(active);
+        return MasterDataMapper.toResponse(customers.save(customer), 0);
     }
 
     @Transactional
     public CustomerResponse update(Long id, CustomerRequest request) {
         Customer customer = load(id);
         checkVersion(customer, request.version());
-        if (customer.isWalkIn() && Boolean.FALSE.equals(request.active())) {
-            throw new BusinessException("The walk-in customer cannot be deactivated");
+        String name = request.name().trim();
+        String phone = trimToNull(request.phone());
+        boolean active = request.active() == null || request.active();
+        if (active) {
+            checkNoDuplicate(name, phone, id);
         }
-        if (!customer.isWalkIn()) {
-            customer.setRepresentative(resolveRepresentative(request.representativeId(), customer.getRepresentative()));
-        }
-        apply(customer, request);
-        return MasterDataMapper.toResponse(customers.saveAndFlush(customer));
+        customer.setName(name);
+        customer.setPhone(phone);
+        customer.setEmail(trimToNull(request.email()));
+        customer.setAddress(trimToNull(request.address()));
+        customer.setActive(active);
+        Customer saved = customers.saveAndFlush(customer);
+        return MasterDataMapper.toResponse(saved, orders.countByCustomerId(id));
     }
 
     @Transactional
     public void delete(Long id) {
         Customer customer = load(id);
-        if (customer.isWalkIn()) {
-            throw new BusinessException("The walk-in customer cannot be deleted");
-        }
         String label = "Customer '" + customer.getName() + "'";
-        if (sales.existsByCustomerId(id) || samples.existsByCustomerId(id)) {
+        if (orders.existsByCustomerId(id) || measurements.existsByCustomerId(id)) {
             throw inUse(label);
         }
         deleteIfUnused(customers, customer, label);
     }
 
-    private void apply(Customer c, CustomerRequest r) {
-        c.setName(r.name().trim());
-        c.setPhone(trimToNull(r.phone()));
-        c.setEmail(trimToNull(r.email()));
-        c.setAddress(trimToNull(r.address()));
-        c.setActive(r.active() == null || r.active());
+    /** Active customer with the same name and phone (ignoring case) is refused. */
+    private void checkNoDuplicate(String name, String phone, Long excludeId) {
+        long same = customers.countActiveDuplicates(name.toLowerCase(Locale.ROOT),
+                phone == null ? "" : phone, excludeId);
+        if (same > 0) {
+            throw new BusinessException(HttpStatus.CONFLICT, "An active customer named '" + name
+                    + "' with this phone number already exists");
+        }
     }
 
-    /**
-     * Every customer needs a representative. A newly chosen one must be active; keeping the current
-     * (since deactivated) one is allowed so other details can still be edited.
-     */
-    private Representative resolveRepresentative(Long id, Representative current) {
-        if (id == null) {
-            throw new BusinessException("Choose the customer's representative");
+    private Map<Long, Long> orderCounts(Collection<Customer> page) {
+        if (page.isEmpty()) return Map.of();
+        List<Long> ids = page.stream().map(Customer::getId).toList();
+        Map<Long, Long> counts = new HashMap<>();
+        for (Object[] row : orders.countPerCustomer(ids)) {
+            counts.put((Long) row[0], (Long) row[1]);
         }
-        if (current != null && current.getId().equals(id)) return current;
-        Representative r = representatives.findById(id)
-                .orElseThrow(() -> new BusinessException("Selected representative does not exist"));
-        if (!r.isActive()) {
-            throw new BusinessException("Representative '" + r.getName() + "' is inactive");
-        }
-        return r;
+        return counts;
     }
 
     private Customer load(Long id) {
-        return customers.findWithRepresentativeById(id).orElseThrow(() -> new ResourceNotFoundException("Customer", id));
+        return customers.findById(id)
+                .filter(c -> !c.isWalkIn())
+                .orElseThrow(() -> new ResourceNotFoundException("Customer", id));
     }
 }

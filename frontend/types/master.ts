@@ -3,69 +3,15 @@ export interface Ref {
   name: string;
 }
 
-interface Audited {
+export interface Customer {
   id: number;
+  name: string;
+  phone: string | null;
+  email: string | null;
+  address: string | null;
   active: boolean;
   version: number;
-  createdAt: string;
-  updatedAt: string;
-}
-
-/** Publishers and suppliers share this shape. */
-export interface Party extends Audited {
-  name: string;
-  contactPerson: string | null;
-  phone: string | null;
-  email: string | null;
-  address: string | null;
-}
-
-export interface PartyInput {
-  name: string;
-  contactPerson: string;
-  phone: string;
-  email: string;
-  address: string;
-  active: boolean;
-  version?: number;
-}
-
-/** Representative as shown on customers and invoices. */
-export interface RepresentativeRef {
-  id: number;
-  name: string;
-  area: string | null;
-  phone: string | null;
-}
-
-export interface Representative extends Audited {
-  name: string;
-  phone: string | null;
-  email: string | null;
-  address: string | null;
-  area: string | null;
-  builtIn: boolean;
-  customerCount: number;
-}
-
-export interface RepresentativeInput {
-  name: string;
-  phone: string;
-  email: string;
-  address: string;
-  area: string;
-  active: boolean;
-  version?: number;
-}
-
-export interface Customer extends Audited {
-  name: string;
-  phone: string | null;
-  email: string | null;
-  address: string | null;
-  /** Null for the walk-in customer and customers from before representatives existed. */
-  representative: RepresentativeRef | null;
-  walkIn: boolean;
+  orderCount: number;
 }
 
 export interface CustomerInput {
@@ -73,46 +19,99 @@ export interface CustomerInput {
   phone: string;
   email: string;
   address: string;
-  representativeId: number | null;
   active: boolean;
   version?: number;
 }
 
-export interface Category extends Audited {
+export interface Fabric {
+  id: number;
+  code: string;
+  name: string;
+  material: string | null;
+  colour: string | null;
+  pattern: string | null;
+  width: number | null;
+  costPerMetre: number;
+  pricePerMetre: number;
+  active: boolean;
+  version: number;
+  quantityOnHand: number;
+  reorderLevel: number;
+  lowStock: boolean;
+}
+
+export interface FabricInput {
+  code: string;
+  name: string;
+  material: string;
+  colour: string;
+  pattern: string;
+  width: number | null;
+  costPerMetre: number | null;
+  pricePerMetre: number | null;
+  reorderLevel: number | null;
+  active: boolean;
+  version?: number;
+}
+
+export type GarmentShape = "TOP" | "BOTTOM" | "FULL";
+
+export interface GarmentPoint {
+  id: number;
+  label: string;
+  sortOrder: number;
+  active: boolean;
+}
+
+export interface GarmentType {
+  id: number;
   name: string;
   description: string | null;
+  shape: GarmentShape;
+  active: boolean;
+  version: number;
+  inUse: boolean;
+  points: GarmentPoint[];
 }
 
-export interface CategoryInput {
+export interface GarmentPointInput {
+  id: number | null;
+  label: string;
+  sortOrder: number;
+  active: boolean;
+}
+
+export interface GarmentTypeInput {
   name: string;
   description: string;
+  shape: GarmentShape;
   active: boolean;
+  points: GarmentPointInput[];
   version?: number;
 }
 
-export interface Product extends Audited {
-  productType: "BOOK";
-  isbn: string | null;
-  title: string;
-  author: string | null;
-  publisher: Ref | null;
-  category: Ref | null;
-  edition: string | null;
-  publicationYear: number | null;
-  purchasePrice: number;
-  sellingPrice: number;
+export interface MeasurementValue {
+  pointId: number;
+  label: string;
+  value: number;
+  sortOrder: number;
 }
 
-export interface ProductInput {
-  isbn: string;
-  title: string;
-  author: string;
-  publisherId: number | null;
-  categoryId: number | null;
-  edition: string;
-  publicationYear: number | null;
-  purchasePrice: number | null;
-  sellingPrice: number | null;
-  active: boolean;
-  version?: number;
+export interface MeasurementRecord {
+  id: number;
+  customerId: number;
+  customerName: string;
+  garmentType: { id: number; name: string; shape: GarmentShape };
+  takenOn: string;
+  notes: string | null;
+  createdAt: string;
+  createdBy: string;
+  values: MeasurementValue[];
+}
+
+export interface MeasurementRecordInput {
+  garmentTypeId: number;
+  takenOn: string;
+  notes: string;
+  values: { pointId: number; value: number }[];
 }

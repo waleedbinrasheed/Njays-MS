@@ -32,7 +32,7 @@ export interface FormRenderProps<T> {
 interface EntityListPageProps<T extends { id: number; active: boolean }> {
   title: string;
   description: string;
-  /** Singular, lower case: "publisher". */
+  /** Singular, lower case: "customer". */
   noun: string;
   list: (query: ListQuery, signal: AbortSignal) => Promise<Page<T>>;
   remove: (id: number) => Promise<void>;
@@ -41,7 +41,7 @@ interface EntityListPageProps<T extends { id: number; active: boolean }> {
   searchPlaceholder: string;
   displayName: (row: T) => string;
   renderForm: (props: FormRenderProps<T>) => ReactNode;
-  /** Rows that may never be deleted (e.g. the walk-in customer). */
+  /** Rows that may never be deleted (e.g. a fabric already used on an order). */
   canDelete?: (row: T) => boolean;
   /** Extra filter controls and the query parameters they produce. */
   filters?: ReactNode;

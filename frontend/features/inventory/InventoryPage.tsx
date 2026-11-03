@@ -2,32 +2,21 @@
 
 import Link from "next/link";
 import { useState, type FormEvent } from "react";
-import { type Option } from "@/components/ui/AsyncSelect";
-import { Button } from "@/components/ui/Button";
 import { Badge, EmptyState, ErrorBanner, PageHeader } from "@/components/ui/Feedback";
 import { SearchInput, TextField } from "@/components/ui/FormField";
 import { FormDialog } from "@/components/ui/FormDialog";
-import { Modal } from "@/components/ui/Modal";
 import { Pagination } from "@/components/ui/Pagination";
-import { SortableHeader, nextSort, toSortParam, type SortState } from "@/components/ui/SortableHeader";
 import { Spinner } from "@/components/ui/Spinner";
-import { StatTile } from "@/components/ui/StatTile";
 import { useToast } from "@/components/ui/Toast";
 import { useAuth } from "@/features/auth/AuthProvider";
-import { FilterSelect } from "@/features/master/FilterSelect";
-import { loadCategoryOptions, loadPublisherOptions } from "@/features/master/lookups";
 import { useApiQuery } from "@/hooks/useApiQuery";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { ApiError } from "@/services/apiClient";
 import { inventoryService } from "@/services/inventoryService";
-import type { InventoryItem, StockLevel, StockStatusFilter } from "@/types/inventory";
+import type { InventoryRow } from "@/types/inventory";
 import { formatCurrency } from "@/utils/format";
-import { STOCK_LEVEL_LABELS, formatSignedQuantity } from "@/utils/labels";
-import { AdjustmentForm } from "./AdjustmentForm";
 
 const PAGE_SIZE = 25;
-const LEVEL_TONE: Record<StockLevel, "red" | "amber" | "green"> = { OUT_OF_STOCK: "red", LOW: "amber", OK: "green" };
-const fmt = (n: number | undefined) => (n === undefined ? "–" : n.toLocaleString("en-PK"));
 
 export function InventoryPage() {
   const toast = useToast();
@@ -35,104 +24,54 @@ export function InventoryPage() {
   const canAdjust = hasPermission("STOCK_ADJUST");
 
   const [search, setSearch] = useState("");
-  const [status, setStatus] = useState<StockStatusFilter | "">("");
-  const [category, setCategory] = useState<Option | null>(null);
-  const [publisher, setPublisher] = useState<Option | null>(null);
+  const [lowOnly, setLowOnly] = useState(false);
   const [page, setPage] = useState(0);
-  const [sort, setSort] = useState<SortState>({ field: "title", direction: "asc" });
-  const [adjusting, setAdjusting] = useState<InventoryItem | null>(null);
-  const [reordering, setReordering] = useState<InventoryItem | null>(null);
+  const [reordering, setReordering] = useState<InventoryRow | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const debouncedSearch = useDebouncedValue(search);
 
   const list = useApiQuery(
-    (signal) =>
-      inventoryService.list(
-        {
-          search: debouncedSearch,
-          status: status || undefined,
-          categoryId: category?.id,
-          publisherId: publisher?.id,
-          active: true,
-          page,
-          size: PAGE_SIZE,
-          sort: toSortParam(sort),
-        },
-        signal,
-      ),
-    [debouncedSearch, status, category?.id ?? null, publisher?.id ?? null, page, sort, refreshKey],
+    (signal) => inventoryService.list({ search: debouncedSearch, lowStockOnly: lowOnly || undefined, page, size: PAGE_SIZE, sort: "code,asc" }, signal),
+    [debouncedSearch, lowOnly, page, refreshKey],
   );
-  const summary = useApiQuery((signal) => inventoryService.summary(signal), [refreshKey]);
-
-  const refresh = () => setRefreshKey((k) => k + 1);
-  const onSort = (field: string) => {
-    setSort((s) => nextSort(s, field));
-    setPage(0);
-  };
-  const resetPage = <T,>(setter: (v: T) => void) => (v: T) => {
-    setter(v);
-    setPage(0);
-  };
-
   const rows = list.data?.content ?? [];
 
   return (
     <>
       <PageHeader
-        title="Inventory"
-        description="Current stock of every active product. Stock changes only through purchases, sales, returns and adjustments."
+        title="Fabric Stock"
+        description="Metres of fabric on hand. Cloth comes into stock through a stock-in adjustment; orders take it out when they are made."
         actions={
           canAdjust ? (
             <Link href="/inventory/adjustments" className="inline-flex h-9 items-center rounded-md bg-blue-600 px-4 text-sm font-medium text-white hover:bg-blue-700">
-              New adjustment
+              Stock adjustment
             </Link>
           ) : undefined
         }
       />
 
-      <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatTile label="Products" value={fmt(summary.data?.totalProducts)} />
-        <StatTile label="Units in stock" value={fmt(summary.data?.totalQuantity)} />
-        <StatTile
-          label="Low stock"
-          value={fmt(summary.data?.lowStockProducts)}
-          status={summary.data?.lowStockProducts ? { tone: "warning", text: "Needs reorder" } : undefined}
-          detail="Show"
-          onClick={() => resetPage(setStatus)("LOW")}
-        />
-        <StatTile
-          label="Out of stock"
-          value={fmt(summary.data?.outOfStockProducts)}
-          status={summary.data?.outOfStockProducts ? { tone: "critical", text: "Cannot be sold" } : undefined}
-          detail="Show"
-          onClick={() => resetPage(setStatus)("OUT")}
-        />
-      </div>
-
       <div className="mb-4 flex flex-col flex-wrap gap-2 sm:flex-row sm:items-center">
         <SearchInput
-          placeholder="Search ISBN, title or author"
+          placeholder="Search code, name or colour"
           value={search}
-          onChange={(e) => resetPage(setSearch)(e.target.value)}
-          aria-label="Search inventory"
+          onChange={(e) => {
+            setSearch(e.target.value);
+            setPage(0);
+          }}
+          aria-label="Search fabric stock"
         />
-        <select
-          value={status}
-          onChange={(e) => resetPage(setStatus)(e.target.value as StockStatusFilter | "")}
-          className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
-          aria-label="Stock status"
-        >
-          <option value="">All stock levels</option>
-          <option value="LOW">Low stock (at or below reorder level)</option>
-          <option value="OUT">Out of stock</option>
-          <option value="IN_STOCK">In stock</option>
-        </select>
-        <div className="sm:w-52">
-          <FilterSelect label="Category" placeholder="All categories" value={category} onChange={resetPage(setCategory)} load={loadCategoryOptions} />
-        </div>
-        <div className="sm:w-52">
-          <FilterSelect label="Publisher" placeholder="All publishers" value={publisher} onChange={resetPage(setPublisher)} load={loadPublisherOptions} />
-        </div>
+        <label className="flex items-center gap-2 text-sm text-slate-600">
+          <input
+            type="checkbox"
+            className="accent-blue-600"
+            checked={lowOnly}
+            onChange={(e) => {
+              setLowOnly(e.target.checked);
+              setPage(0);
+            }}
+          />
+          Low stock only
+        </label>
         {list.loading && list.data && <Spinner size="sm" />}
       </div>
 
@@ -147,50 +86,45 @@ export function InventoryPage() {
           <table className="min-w-full divide-y divide-slate-200 text-sm">
             <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
               <tr>
-                <SortableHeader label="Title" field="title" sort={sort} onSort={onSort} />
-                <SortableHeader label="ISBN" field="isbn" sort={sort} onSort={onSort} />
-                <th scope="col" className="px-4 py-2.5 font-medium">Category</th>
-                <th scope="col" className="px-4 py-2.5 font-medium">Publisher</th>
-                <SortableHeader label="Stock" field="quantity" sort={sort} onSort={onSort} />
-                <SortableHeader label="Reorder at" field="reorderLevel" sort={sort} onSort={onSort} />
-                <th scope="col" className="px-4 py-2.5 text-right font-medium">Selling price</th>
+                <th scope="col" className="px-4 py-2.5 font-medium">Code</th>
+                <th scope="col" className="px-4 py-2.5 font-medium">Fabric</th>
+                <th scope="col" className="px-4 py-2.5 text-right font-medium">On hand (m)</th>
+                <th scope="col" className="px-4 py-2.5 text-right font-medium">Reorder at (m)</th>
+                <th scope="col" className="px-4 py-2.5 text-right font-medium">Cost value</th>
                 <th scope="col" className="px-4 py-2.5">
                   <span className="sr-only">Actions</span>
                 </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {rows.map((i) => (
-                <tr key={i.productId} className="hover:bg-slate-50">
+              {rows.map((r) => (
+                <tr key={r.productId} className="align-top">
+                  <td className="whitespace-nowrap px-4 py-2.5 font-mono text-xs">{r.code}</td>
                   <td className="px-4 py-2.5">
-                    <div className="font-medium text-slate-900">{i.title}</div>
-                    {i.author && <div className="text-xs text-slate-500">{i.author}</div>}
+                    <div className="font-medium text-slate-900">{r.name}</div>
+                    <div className="text-xs text-slate-500">{[r.colour, r.material].filter(Boolean).join(" · ") || "-"}</div>
                   </td>
-                  <td className="whitespace-nowrap px-4 py-2.5 font-mono text-xs">{i.isbn ?? "-"}</td>
-                  <td className="px-4 py-2.5">{i.category?.name ?? "-"}</td>
-                  <td className="px-4 py-2.5">{i.publisher?.name ?? "-"}</td>
-                  <td className="whitespace-nowrap px-4 py-2.5">
-                    <span className="mr-2 text-base font-semibold tabular-nums text-slate-900">{i.quantity}</span>
-                    {i.stockLevel !== "OK" && <Badge tone={LEVEL_TONE[i.stockLevel]}>{STOCK_LEVEL_LABELS[i.stockLevel]}</Badge>}
+                  <td className="whitespace-nowrap px-4 py-2.5 text-right tabular-nums">
+                    {r.quantityOnHand.toFixed(3)}{" "}
+                    {r.quantityOnHand <= 0 ? <Badge tone="red">Out</Badge> : r.lowStock ? <Badge tone="amber">Low</Badge> : null}
                   </td>
-                  <td className="px-4 py-2.5 tabular-nums">{i.reorderLevel}</td>
-                  <td className="whitespace-nowrap px-4 py-2.5 text-right tabular-nums">{formatCurrency(i.sellingPrice)}</td>
-                  <td className="whitespace-nowrap px-4 py-2.5 text-right">
-                    <Link
-                      href={`/inventory/movements?productId=${i.productId}`}
-                      className="mr-1 inline-flex h-8 items-center rounded-md px-3 text-xs font-medium text-slate-600 hover:bg-slate-100"
-                    >
+                  <td className="whitespace-nowrap px-4 py-2.5 text-right tabular-nums">
+                    {r.reorderLevel.toFixed(3)}
+                    {canAdjust && (
+                      <button type="button" className="ml-2 text-xs text-blue-700 hover:underline" onClick={() => setReordering(r)}>
+                        Change
+                      </button>
+                    )}
+                  </td>
+                  <td className="whitespace-nowrap px-4 py-2.5 text-right tabular-nums">{formatCurrency(r.costValue)}</td>
+                  <td className="whitespace-nowrap px-4 py-2.5 text-right text-sm">
+                    <Link href={`/inventory/movements?productId=${r.productId}`} className="text-blue-700 hover:underline">
                       History
                     </Link>
                     {canAdjust && (
-                      <>
-                        <Button size="sm" variant="ghost" onClick={() => setReordering(i)}>
-                          Reorder level
-                        </Button>
-                        <Button size="sm" variant="ghost" onClick={() => setAdjusting(i)}>
-                          Adjust
-                        </Button>
-                      </>
+                      <Link href={`/inventory/adjustments?productId=${r.productId}`} className="ml-3 text-blue-700 hover:underline">
+                        Adjust
+                      </Link>
                     )}
                   </td>
                 </tr>
@@ -200,14 +134,11 @@ export function InventoryPage() {
         </div>
         {list.loading && !list.data && (
           <div className="flex justify-center py-10 text-blue-600">
-            <Spinner label="Loading inventory..." />
+            <Spinner label="Loading fabric stock..." />
           </div>
         )}
         {!list.loading && list.data && rows.length === 0 && (
-          <EmptyState
-            title="No products match"
-            description={search || status || category || publisher ? "Try clearing some filters." : "Add products under Master Data."}
-          />
+          <EmptyState title="No fabrics found" description={search || lowOnly ? "Try a different search or filter." : undefined} />
         )}
         {list.data && (
           <Pagination
@@ -220,32 +151,14 @@ export function InventoryPage() {
         )}
       </div>
 
-      {adjusting && (
-        <Modal open title={`Adjust stock: ${adjusting.title}`} onClose={() => setAdjusting(null)}>
-          <AdjustmentForm
-            key={adjusting.productId}
-            initialProduct={{ id: adjusting.productId, label: adjusting.title }}
-            lockProduct
-            onCancel={() => setAdjusting(null)}
-            onDone={(a) => {
-              setAdjusting(null);
-              toast.success(
-                `Stock of "${a.product.title}" adjusted ${formatSignedQuantity(a.adjustmentQuantity)} (now ${a.resultingQuantity})`,
-              );
-              refresh();
-            }}
-          />
-        </Modal>
-      )}
       {reordering && (
         <ReorderLevelDialog
-          key={reordering.productId}
-          item={reordering}
+          row={reordering}
           onClose={() => setReordering(null)}
-          onSaved={(saved) => {
+          onSaved={() => {
             setReordering(null);
-            toast.success(`Reorder level of "${saved.title}" set to ${saved.reorderLevel}`);
-            refresh();
+            toast.success(`Reorder level for "${reordering.name}" saved`);
+            setRefreshKey((k) => k + 1);
           }}
         />
       )}
@@ -253,51 +166,42 @@ export function InventoryPage() {
   );
 }
 
-function ReorderLevelDialog({
-  item,
-  onClose,
-  onSaved,
-}: {
-  item: InventoryItem;
-  onClose: () => void;
-  onSaved: (item: InventoryItem) => void;
-}) {
-  const [value, setValue] = useState(String(item.reorderLevel));
-  const [error, setError] = useState<string | null>(null);
+function ReorderLevelDialog({ row, onClose, onSaved }: { row: InventoryRow; onClose: () => void; onSaved: () => void }) {
+  const [level, setLevel] = useState(String(row.reorderLevel));
+  const [error, setError] = useState<string | undefined>();
+  const [formError, setFormError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
   async function submit(e: FormEvent) {
     e.preventDefault();
-    const n = Number(value);
-    if (value.trim() === "" || !Number.isInteger(n) || n < 0) {
-      setError("Enter a whole number, 0 or more");
+    const value = Number(level);
+    if (level.trim() === "" || !Number.isFinite(value) || value < 0 || !/^\d+(\.\d{1,3})?$/.test(level.trim())) {
+      setError("Enter metres of zero or more, up to 3 decimals");
       return;
     }
     setSaving(true);
     try {
-      onSaved(await inventoryService.setReorderLevel(item.productId, n));
+      await inventoryService.setReorderLevel(row.productId, value, row.version);
+      onSaved();
     } catch (err) {
-      setError(err instanceof ApiError ? (err.fieldErrors.reorderLevel ?? err.message) : "Could not save");
+      setFormError(err instanceof ApiError ? err.message : "Could not save the reorder level");
       setSaving(false);
     }
   }
 
   return (
-    <FormDialog title={`Reorder level: ${item.title}`} submitLabel="Save" saving={saving} formError={null} onSubmit={submit} onClose={onClose}>
-      <p className="text-sm text-slate-600">
-        The product is flagged as low stock when its quantity is at or below this number. Current stock: <strong>{item.quantity}</strong>.
-      </p>
+    <FormDialog title={`Reorder level · ${row.name}`} submitLabel="Save" saving={saving} formError={formError} onSubmit={submit} onClose={onClose}>
       <TextField
-        label="Reorder level"
+        label="Reorder at (metres)"
         type="number"
-        inputMode="numeric"
+        inputMode="decimal"
         min="0"
-        step="1"
-        value={value}
-        onChange={(e) => setValue(e.target.value)}
-        error={error ?? undefined}
-        autoFocus
+        step="0.001"
+        value={level}
+        onChange={(e) => setLevel(e.target.value)}
+        error={error}
         required
+        autoFocus
       />
     </FormDialog>
   );

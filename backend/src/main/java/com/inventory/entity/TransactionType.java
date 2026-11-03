@@ -1,25 +1,11 @@
 package com.inventory.entity;
 
-/** Kinds of stock movement. The sign of the quantity is decided by the business operation. */
+/** Kinds of fabric stock movement. The sign of the quantity is decided by the business operation. */
 public enum TransactionType {
-    /** Goods received from a supplier (+). */
-    PURCHASE,
-    /** Goods sold to a customer (−). */
-    SALE,
-    /** Customer returned goods (+). */
-    SALE_RETURN,
-    /** Goods sent back to a supplier (−). */
-    PURCHASE_RETURN,
-    /** Manual correction (±). */
+    /** Manual correction (+ or -): stock-in, damage, loss, count corrections. */
     ADJUSTMENT,
-    /** Reversal of a cancelled purchase (−). */
-    PURCHASE_CANCEL,
-    /** Reversal of a cancelled sale (+). */
-    SALE_CANCEL,
-    /** Books given to a representative as samples (−). */
-    SAMPLE_ISSUE,
-    /** Samples brought back by the representative (+). */
-    SAMPLE_RETURN,
-    /** Reversal of a cancelled sample issue (+). */
-    SAMPLE_CANCEL
+    /** Fabric cut for an order (-). */
+    ORDER_ISSUE,
+    /** Fabric returned to stock when an order is cancelled (+). */
+    ORDER_CANCEL
 }

@@ -13,6 +13,7 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import org.hibernate.annotations.Immutable;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 
 /** Write-once ledger row. There are no setters: history is never edited. */
@@ -33,9 +34,9 @@ public class StockTransaction {
     @Column(name = "transaction_type", nullable = false, length = 20)
     private TransactionType type;
 
-    /** Signed change: positive adds stock, negative removes it. */
-    @Column(nullable = false)
-    private int quantity;
+    /** Signed change in metres: positive adds stock, negative removes it. */
+    @Column(nullable = false, precision = 12, scale = 3)
+    private BigDecimal quantity;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "reference_type", length = 20)
@@ -44,11 +45,11 @@ public class StockTransaction {
     @Column(name = "reference_id")
     private Long referenceId;
 
-    @Column(name = "previous_quantity", nullable = false)
-    private int previousQuantity;
+    @Column(name = "previous_quantity", nullable = false, precision = 12, scale = 3)
+    private BigDecimal previousQuantity;
 
-    @Column(name = "resulting_quantity", nullable = false)
-    private int resultingQuantity;
+    @Column(name = "resulting_quantity", nullable = false, precision = 12, scale = 3)
+    private BigDecimal resultingQuantity;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "created_by", nullable = false)
@@ -63,14 +64,14 @@ public class StockTransaction {
     protected StockTransaction() {
     }
 
-    public StockTransaction(Product product, TransactionType type, int quantity, int previousQuantity,
+    public StockTransaction(Product product, TransactionType type, BigDecimal quantity, BigDecimal previousQuantity,
                             ReferenceType referenceType, Long referenceId, AppUser createdBy, Instant createdAt,
                             String notes) {
         this.product = product;
         this.type = type;
         this.quantity = quantity;
         this.previousQuantity = previousQuantity;
-        this.resultingQuantity = previousQuantity + quantity;
+        this.resultingQuantity = previousQuantity.add(quantity);
         this.referenceType = referenceType;
         this.referenceId = referenceId;
         this.createdBy = createdBy;
@@ -90,7 +91,7 @@ public class StockTransaction {
         return type;
     }
 
-    public int getQuantity() {
+    public BigDecimal getQuantity() {
         return quantity;
     }
 
@@ -102,11 +103,11 @@ public class StockTransaction {
         return referenceId;
     }
 
-    public int getPreviousQuantity() {
+    public BigDecimal getPreviousQuantity() {
         return previousQuantity;
     }
 
-    public int getResultingQuantity() {
+    public BigDecimal getResultingQuantity() {
         return resultingQuantity;
     }
 

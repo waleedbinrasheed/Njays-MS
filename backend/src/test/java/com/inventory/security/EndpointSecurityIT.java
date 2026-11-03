@@ -64,8 +64,9 @@ class EndpointSecurityIT extends ApiTestBase {
     @Test
     void sweepFindsTheWholeApi() {
         // Guards the sweep itself: if discovery broke, the other tests would pass vacuously.
-        assertThat(endpoints()).hasSizeGreaterThan(60)
-                .contains("POST /api/samples", "POST /api/sales/{id}/cancel", "PUT /api/users/{id}");
+        assertThat(endpoints()).hasSizeGreaterThan(40)
+                .contains("POST /api/orders", "POST /api/orders/{id}/cancel", "PUT /api/users/{id}",
+                        "POST /api/customers/{customerId}/measurements");
     }
 
     @Test

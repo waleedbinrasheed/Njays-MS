@@ -8,6 +8,7 @@ import com.inventory.dto.inventory.InventoryDtos.StockAdjustmentResponse;
 import com.inventory.entity.AdjustmentReason;
 import com.inventory.entity.AppUser;
 import com.inventory.entity.Inventory;
+import com.inventory.entity.ProductType;
 import com.inventory.entity.ReferenceType;
 import com.inventory.entity.StockAdjustment;
 import com.inventory.entity.StockTransaction;
@@ -25,12 +26,15 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
 
+import static com.inventory.service.MasterDataSupport.metres;
+import static com.inventory.service.MasterDataSupport.plain;
 import static com.inventory.service.MasterDataSupport.trimToNull;
 
-/** Manual stock corrections and reorder-level maintenance. */
+/** Manual fabric stock corrections (including stock-in) and reorder-level maintenance. */
 @Service
 public class StockAdjustmentService {
 
@@ -56,30 +60,34 @@ public class StockAdjustmentService {
      */
     @Transactional
     public StockAdjustmentResponse adjust(StockAdjustmentRequest request) {
-        if (request.adjustmentQuantity() == 0) {
+        BigDecimal change = metres(request.adjustmentQuantity());
+        if (change.signum() == 0) {
             throw new BusinessException("Adjustment quantity must not be zero");
+        }
+        if (request.reason() == AdjustmentReason.STOCK_IN && change.signum() < 0) {
+            throw new BusinessException("Stock-in must add stock: enter a positive quantity");
         }
         String notes = trimToNull(request.notes());
         if (request.reason() == AdjustmentReason.OTHER && notes == null) {
             throw new BusinessException("Notes are required when the reason is 'Other'");
         }
 
-        Inventory stock = inventories.lockByProductId(request.productId())
-                .orElseThrow(() -> new ResourceNotFoundException("Product", request.productId()));
-        if (stock.getQuantity() != request.expectedCurrentQuantity()) {
+        Inventory stock = lockFabric(request.productId());
+        BigDecimal expected = metres(request.expectedCurrentQuantity());
+        if (stock.getQuantity().compareTo(expected) != 0) {
             throw new BusinessException(HttpStatus.CONFLICT, "Stock of '" + stock.getProduct().getTitle()
-                    + "' changed to " + stock.getQuantity() + " while you were entering the adjustment. "
+                    + "' changed to " + plain(stock.getQuantity()) + " m while you were entering the adjustment. "
                     + "Review the new quantity and try again");
         }
         // Checked before anything is written so the user gets the clear "insufficient stock" message.
-        inventoryService.requireAvailable(stock, request.adjustmentQuantity());
+        inventoryService.requireAvailable(stock, change);
 
         AppUser actor = users.getReferenceById(CurrentUser.requireId());
         StockAdjustment adjustment = adjustments.save(new StockAdjustment(stock.getProduct(), request.reason(),
-                stock.getQuantity(), request.adjustmentQuantity(), notes, actor, Instant.now(clock)));
+                stock.getQuantity(), change, notes, actor, Instant.now(clock)));
 
         StockTransaction tx = inventoryService.apply(new Movement(stock.getProduct().getId(), TransactionType.ADJUSTMENT,
-                request.adjustmentQuantity(), ReferenceType.ADJUSTMENT, adjustment.getId(), ledgerNote(request.reason(), notes)));
+                change, ReferenceType.ADJUSTMENT, adjustment.getId(), ledgerNote(request.reason(), notes)));
 
         return InventoryMapper.toResponse(adjustment, tx.getId());
     }
@@ -91,15 +99,24 @@ public class StockAdjustmentService {
 
     @Transactional
     public InventoryItem changeReorderLevel(Long productId, ReorderLevelRequest request) {
-        Inventory stock = inventories.lockByProductId(productId)
-                .orElseThrow(() -> new ResourceNotFoundException("Product", productId));
-        stock.changeReorderLevel(request.reorderLevel(), Instant.now(clock));
+        Inventory stock = lockFabric(productId);
+        stock.changeReorderLevel(metres(request.reorderLevel()), Instant.now(clock));
         inventories.flush();
         return inventories.findDetailedByProductId(productId).map(InventoryMapper::toItem).orElseThrow();
     }
 
+    private Inventory lockFabric(Long productId) {
+        Inventory stock = inventories.lockByProductId(productId)
+                .orElseThrow(() -> new ResourceNotFoundException("Fabric", productId));
+        if (stock.getProduct().getProductType() != ProductType.FABRIC) {
+            throw new BusinessException("'" + stock.getProduct().getTitle() + "' is not a fabric");
+        }
+        return stock;
+    }
+
     private static String ledgerNote(AdjustmentReason reason, String notes) {
         String label = switch (reason) {
+            case STOCK_IN -> "Stock in";
             case DAMAGED -> "Damaged";
             case LOST -> "Lost";
             case COUNT_CORRECTION -> "Physical count correction";

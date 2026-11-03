@@ -49,7 +49,7 @@ export function useReport<R>(
   };
 }
 
-/** "Category: Fiction · From 2026-09-01" for the printed header. */
+/** "Customer: Ali · From 2026-09-01" for the printed header. */
 export function describeFilters(parts: [string, string | null | undefined][]): string {
   return parts
     .filter(([, v]) => v)

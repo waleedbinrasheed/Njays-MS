@@ -14,6 +14,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.jpa.repository.QueryHints;
 import org.springframework.data.repository.query.Param;
 
+import java.util.List;
 import java.util.Optional;
 
 public interface InventoryRepository extends JpaRepository<Inventory, Long>, JpaSpecificationExecutor<Inventory> {
@@ -27,22 +28,16 @@ public interface InventoryRepository extends JpaRepository<Inventory, Long>, Jpa
     @Query("select i from Inventory i join fetch i.product where i.product.id = :productId")
     Optional<Inventory> lockByProductId(@Param("productId") Long productId);
 
-    @EntityGraph(attributePaths = {"product", "product.publisher", "product.category"})
+    @EntityGraph(attributePaths = {"product"})
     @Query("select i from Inventory i where i.product.id = :productId")
     Optional<Inventory> findDetailedByProductId(@Param("productId") Long productId);
 
     @Override
-    @EntityGraph(attributePaths = {"product", "product.publisher", "product.category"})
+    @EntityGraph(attributePaths = {"product"})
     Page<Inventory> findAll(Specification<Inventory> spec, Pageable pageable);
 
-    /** [products, total units, low-stock count, out-of-stock count] over active products. */
-    @Query("""
-            select count(i),
-                   coalesce(sum(i.quantity), 0),
-                   coalesce(sum(case when i.quantity <= i.reorderLevel then 1 else 0 end), 0),
-                   coalesce(sum(case when i.quantity = 0 then 1 else 0 end), 0)
-            from Inventory i
-            where i.product.active = true
-            """)
-    Object[] summaryRow();
+    /** Stock rows of every fabric, active or not. Used for the summary figures. */
+    @EntityGraph(attributePaths = {"product"})
+    @Query("select i from Inventory i where i.product.productType = com.inventory.entity.ProductType.FABRIC")
+    List<Inventory> findAllFabricStock();
 }

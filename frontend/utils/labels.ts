@@ -1,33 +1,24 @@
-import type { AdjustmentReason, StockLevel, TransactionType } from "@/types/inventory";
-import type { DocumentStatus, PaymentStatus } from "@/types/purchase";
-import type { SampleStatus } from "@/types/sample";
+import type { AdjustmentReason, TransactionType } from "@/types/inventory";
+import type { GarmentShape } from "@/types/master";
+import type { CalendarDateType, FabricSource, OrderStatus, PaymentKind, PaymentMethod, PaymentStatus } from "@/types/order";
 
-export const TRANSACTION_TYPE_LABELS: Record<TransactionType, string> = {
-  PURCHASE: "Purchase",
-  SALE: "Sale",
-  SALE_RETURN: "Sales return",
-  PURCHASE_RETURN: "Purchase return",
-  ADJUSTMENT: "Adjustment",
-  PURCHASE_CANCEL: "Purchase cancelled",
-  SALE_CANCEL: "Sale cancelled",
-  SAMPLE_ISSUE: "Sample issue",
-  SAMPLE_RETURN: "Sample return",
-  SAMPLE_CANCEL: "Sample cancelled",
+export const ORDER_STATUSES: OrderStatus[] = ["RECEIVED", "CUTTING", "STITCHING", "TRIAL", "READY", "DELIVERED", "CANCELLED"];
+
+export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
+  RECEIVED: "Received",
+  CUTTING: "Cutting",
+  STITCHING: "Stitching",
+  TRIAL: "Trial",
+  READY: "Ready",
+  DELIVERED: "Delivered",
+  CANCELLED: "Cancelled",
 };
 
-export const ADJUSTMENT_REASON_LABELS: Record<AdjustmentReason, string> = {
-  DAMAGED: "Damaged",
-  LOST: "Lost",
-  COUNT_CORRECTION: "Physical count correction",
-  FOUND: "Found",
-  OTHER: "Other",
-};
+/** Statuses in which an order's lines may still be edited. */
+export const EDITABLE_STATUSES: OrderStatus[] = ["RECEIVED", "CUTTING", "STITCHING"];
 
-export const STOCK_LEVEL_LABELS: Record<StockLevel, string> = {
-  OUT_OF_STOCK: "Out of stock",
-  LOW: "Low stock",
-  OK: "In stock",
-};
+/** The order of the workflow; CANCELLED is outside it. */
+export const STATUS_FLOW: OrderStatus[] = ["RECEIVED", "CUTTING", "STITCHING", "TRIAL", "READY", "DELIVERED"];
 
 export const PAYMENT_STATUS_LABELS: Record<PaymentStatus, string> = {
   UNPAID: "Unpaid",
@@ -35,16 +26,49 @@ export const PAYMENT_STATUS_LABELS: Record<PaymentStatus, string> = {
   PAID: "Paid",
 };
 
-export const DOCUMENT_STATUS_LABELS: Record<DocumentStatus, string> = {
-  COMPLETED: "Completed",
-  CANCELLED: "Cancelled",
+export const PAYMENT_KIND_LABELS: Record<PaymentKind, string> = {
+  ADVANCE: "Advance",
+  PAYMENT: "Payment",
 };
 
-export const SAMPLE_STATUS_LABELS: Record<SampleStatus, string> = {
-  ISSUED: "Issued",
-  PARTIALLY_RETURNED: "Partially returned",
-  RETURNED: "Fully returned",
-  CANCELLED: "Cancelled",
+export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
+  CASH: "Cash",
+  BANK: "Bank transfer",
+  CARD: "Card",
+  OTHER: "Other",
+};
+
+export const FABRIC_SOURCE_LABELS: Record<FabricSource, string> = {
+  STOCK: "From stock",
+  CUSTOMER: "Customer's own fabric",
+};
+
+export const GARMENT_SHAPE_LABELS: Record<GarmentShape, string> = {
+  TOP: "Top (shirt, kurta, coat)",
+  BOTTOM: "Bottom (trousers, shalwar)",
+  FULL: "Full (dress, suit)",
+};
+
+export const CALENDAR_DATE_LABELS: Record<CalendarDateType, string> = {
+  DUE: "Due date",
+  TRIAL: "Trial",
+  DELIVERY: "Delivery",
+};
+
+export const ADJUSTMENT_REASON_LABELS: Record<AdjustmentReason, string> = {
+  STOCK_IN: "Stock-in (new fabric received)",
+  DAMAGED: "Damaged",
+  LOST: "Lost",
+  COUNT_CORRECTION: "Physical count correction",
+  FOUND: "Found",
+  OTHER: "Other",
+};
+
+export const TRANSACTION_TYPE_LABELS: Record<TransactionType, string> = {
+  STOCK_IN: "Stock-in",
+  ORDER_ISSUE: "Used in order",
+  ORDER_RETURN: "Returned from order",
+  ADJUSTMENT: "Adjustment",
 };
 
 /** "+5" / "−3" with a real minus sign. */
@@ -52,4 +76,10 @@ export function formatSignedQuantity(value: number): string {
   if (value > 0) return `+${value}`;
   if (value < 0) return `−${Math.abs(value)}`;
   return "0";
+}
+
+/** Metres to three decimals, without trailing zeros noise: 2.5 -> "2.500". */
+export function formatMetres(value: number | null | undefined): string {
+  if (value === null || value === undefined) return "-";
+  return `${Number(value).toFixed(3)} m`;
 }

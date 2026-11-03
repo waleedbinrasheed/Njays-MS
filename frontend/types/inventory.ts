@@ -1,91 +1,46 @@
-import type { Ref } from "@/types/master";
+export type AdjustmentReason = "STOCK_IN" | "DAMAGED" | "LOST" | "COUNT_CORRECTION" | "FOUND" | "OTHER";
 
-export type StockLevel = "OUT_OF_STOCK" | "LOW" | "OK";
-export type StockStatusFilter = "LOW" | "OUT" | "IN_STOCK";
+export type TransactionType = "STOCK_IN" | "ORDER_ISSUE" | "ORDER_RETURN" | "ADJUSTMENT";
 
-export type TransactionType =
-  | "PURCHASE"
-  | "SALE"
-  | "SALE_RETURN"
-  | "PURCHASE_RETURN"
-  | "ADJUSTMENT"
-  | "PURCHASE_CANCEL"
-  | "SALE_CANCEL"
-  | "SAMPLE_ISSUE"
-  | "SAMPLE_RETURN"
-  | "SAMPLE_CANCEL";
-
-export type ReferenceType =
-  | "PURCHASE"
-  | "SALE"
-  | "SALE_RETURN"
-  | "PURCHASE_RETURN"
-  | "ADJUSTMENT"
-  | "SAMPLE_ISSUE"
-  | "SAMPLE_RETURN";
-
-export type AdjustmentReason = "DAMAGED" | "LOST" | "COUNT_CORRECTION" | "FOUND" | "OTHER";
-
-export interface ProductRef {
+export interface FabricRef {
   id: number;
-  title: string;
-  isbn: string | null;
+  code: string;
+  name: string;
 }
 
-export interface InventoryItem {
+export interface InventoryRow {
   productId: number;
-  isbn: string | null;
-  title: string;
-  author: string | null;
-  publisher: Ref | null;
-  category: Ref | null;
-  quantity: number;
-  reorderLevel: number;
-  stockLevel: StockLevel;
-  purchasePrice: number;
-  sellingPrice: number;
+  code: string;
+  name: string;
+  material: string | null;
+  colour: string | null;
+  pattern: string | null;
+  width: number | null;
+  costPerMetre: number;
+  pricePerMetre: number;
   active: boolean;
-  updatedAt: string;
-}
-
-export interface InventorySummary {
-  totalProducts: number;
-  totalQuantity: number;
-  lowStockProducts: number;
-  outOfStockProducts: number;
+  quantityOnHand: number;
+  reorderLevel: number;
+  lowStock: boolean;
+  costValue: number;
+  version: number;
 }
 
 export interface StockTransaction {
   id: number;
   createdAt: string;
-  product: ProductRef;
+  product: FabricRef;
   type: TransactionType;
-  quantity: number;
-  previousQuantity: number;
-  resultingQuantity: number;
-  referenceType: ReferenceType | null;
-  referenceId: number | null;
-  user: Ref;
+  change: number;
+  resulting: number;
+  user: { id: number; name: string };
   notes: string | null;
 }
 
 export interface StockAdjustmentInput {
   productId: number;
-  adjustmentQuantity: number;
+  change: number;
+  reason: AdjustmentReason;
   expectedCurrentQuantity: number;
-  reason: AdjustmentReason;
   notes: string;
-}
-
-export interface StockAdjustment {
-  id: number;
-  product: ProductRef;
-  reason: AdjustmentReason;
-  previousQuantity: number;
-  adjustmentQuantity: number;
-  resultingQuantity: number;
-  notes: string | null;
-  user: Ref;
-  createdAt: string;
-  stockTransactionId: number | null;
 }

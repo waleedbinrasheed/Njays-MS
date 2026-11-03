@@ -1,7 +1,7 @@
-# Architecture & Implementation Plan
+# Architecture
 
-Single-business inventory system for a book shop. **There is no branch concept anywhere** —
-one company-wide inventory, one stock location.
+Tailoring shop management: customers, garment orders, fabric stock and body measurements. **There is no branch concept anywhere** - one shop, one stock location.
+
 
 ## Runtime topology (LAN, no Docker)
 
@@ -50,104 +50,74 @@ one company-wide inventory, one stock location.
 | `exception` | `ApiError`, `BusinessException`, `GlobalExceptionHandler` |
 | `security` | User details, login/logout handlers, JSON 401/403 |
 | `validation` | Custom Bean Validation constraints |
-
-### Inventory integrity design (the most important rule)
+### Fabric stock integrity (the most important rule)
 
 - One class, `InventoryService`, is the **only** code allowed to change `inventory.quantity`.
-  Purchases, sales, returns, cancellations and adjustments all call
-  `applyMovement(productId, type, signedQty, referenceType, referenceId, notes)`.
-- Inside one DB transaction it: locks the inventory row (`SELECT … FOR UPDATE`), validates
-  (product active, resulting qty ≥ 0), updates quantity, and inserts a `stock_transaction`
-  with previous / change / resulting quantity, user and timestamp.
-- Safety nets in the schema: `CHECK (quantity >= 0)`, `CHECK (resulting = previous + quantity)`
-  on stock transactions, FKs everywhere, unique `inventory.product_id`.
-- Multi-line documents lock rows in product-id order to avoid deadlocks.
-- Transaction types: `PURCHASE`, `SALE`, `SALE_RETURN`, `PURCHASE_RETURN`, `ADJUSTMENT`,
-  `PURCHASE_CANCEL`, `SALE_CANCEL`, `SAMPLE_ISSUE`, `SAMPLE_RETURN`, `SAMPLE_CANCEL`.
-- Saved sales/purchases are immutable. Cancelling writes reversing movements; returns do
-  partial reversals referencing the original document line.
-- `InventoryService` methods are `Propagation.MANDATORY`: they refuse to run unless the calling
-  business operation already opened a transaction, so a stock change can never commit on its own.
-- Stock adjustments carry the quantity the user saw (`expectedCurrentQuantity`); if stock moved in
-  the meantime the adjustment is rejected (409) instead of being applied to an unseen number.
-- There is deliberately no API that sets a quantity directly. Reorder level (stock-row setting,
-  permission `STOCK_ADJUST`) is the only editable inventory field.
-- `InventoryConcurrencyIT` commits real data from parallel threads and checks: no overselling,
-  no lost updates, all-or-nothing multi-line documents, and `quantity = SUM(ledger)` for every product.
+  Order issue/cancel and manual adjustments all go through `applyAll(List<Movement>)`.
+- Inside one DB transaction it locks the stock row (`SELECT … FOR UPDATE`), validates (fabric product,
+  active product for new cuts, resulting quantity ≥ 0), updates the quantity and inserts a
+  `stock_transaction` with previous / change / resulting quantity, user and timestamp.
+- Quantities are decimal metres with 3 places (`NUMERIC(12,3)`). Inputs with more decimals are rejected.
+- Safety nets in the schema: `CHECK (quantity >= 0)`, `CHECK (resulting = previous + quantity)`, FKs,
+  unique `inventory.product_id`. Multi-line operations lock rows in product-id order.
+- Transaction types: `ADJUSTMENT` (incl. stock-in, reason `STOCK_IN`), `ORDER_ISSUE` (−), `ORDER_CANCEL` (+).
+  Older book-era types remain in the schema for history only.
+- Methods are `Propagation.MANDATORY`: a stock change can never commit on its own.
+- Adjustments carry the quantity the user saw (`expectedCurrentQuantity`); a changed quantity is a 409.
+- Order edits move stock by the **net** change per fabric, so one check runs on the final figure.
+- There is deliberately no API that sets a quantity directly. Reorder level (`STOCK_ADJUST`) is the only
+  other editable inventory field.
 
 ### Other design decisions
 
-- **Products:** table `product` with `product_type` (`BOOK` now). Book attributes (ISBN, author,
-  edition, publication year) are nullable columns so non-book products can be added later
-  without redesign. UI labels it "Books/Products". ISBN unique when present, stored without
-  hyphens/spaces; only the format (10 or 13 digits, ISBN-10 may end in X) is checked, not the
-  check digit, because some locally printed books carry ISBNs with a wrong check digit.
-- **Master data lifecycle:** records are deactivated rather than deleted once used. Delete only
-  succeeds for records nothing references (FK-enforced). Inactive publishers/categories stay on
-  existing products but cannot be chosen for new ones. Updates carry `version`; a stale version
-  returns 409 so one user's edit never silently overwrites another's.
-- **Search:** product search matches ISBN (ignoring hyphens), title and author, backed by
-  `pg_trgm` GIN indexes. All pickers query the API (type-to-search), never load full lists.
-- **Reorder level** lives only on `inventory`.
-- **Roles & permissions:** `app_user`, `role`, `user_role`, plus `permission` and
-  `role_permission`. Code checks permissions (e.g. `SALE_CREATE`), not role names, so new roles
-  are pure data. Seeded roles: `ADMIN`, `NORMAL_USER`.
-- **Document numbers:** `INV-2026-000001` (sales) and `PUR-2026-000001` (purchases), generated from a
-  `document_sequence` table row-locked per (type, year) — gap-free and race-safe.
-- **Money:** `NUMERIC(12,2)`, PKR. Line: `qty × unit price − line discount % + line tax %`.
-  Header: optional fixed discount on the whole invoice. Payment status: `PAID/UNPAID/PARTIAL`.
-- **Purchases:** one line per product; supplier and products must be active; date not in the future
-  (shop time zone). Save = number + document + stock movements in one transaction. Only payment status
-  can change afterwards. Cancel requires a reason and reverses the stock; it is refused if that stock
-  has already been used. Product purchase prices are not changed automatically by purchases.
-- **Sales:** same document rules as purchases; customer defaults to the walk-in customer and must be
-  active; unit price must be above zero. Stock is checked while each product row is locked, so two
-  cashiers cannot sell the same last copy (`SaleConcurrencyIT`). Cancelling returns all stock and is
-  always possible; partial returns are handled by Returns (Phase 7).
-- **Representatives (client change, V10):** the shop sells to representatives, who supply their own
-  customers. A sale is billed to its representative (required, active); the customer on a sale is
-  optional and must belong to that representative. Every customer has a representative (except the
-  legacy walk-in customer). The built-in "Counter Sales" representative replaces the walk-in customer
-  for counter sales. Invoices from before V10 keep their customer and show as "Unassigned"
-  (`chk_sale_party`: a sale has a representative or a customer). Representatives with customers or
-  sales can only be deactivated; "move all customers" reassigns in one statement (bumping versions).
-  The Representative report (customers, invoices, sales, returns, net, paid, owed, last sale) includes
-  an "Unassigned" row so its totals match the Sales report.
-- **Samples (client change, V11):** books handed to a representative as a "SAMPLE SALE" (`SMP-…`), kept
-  completely apart from sales: never in sales totals, the Sales/Representative reports or dashboard sales.
-  Several books per sample; the sample price defaults to the book's purchase price, may be edited, is never
-  above the selling price, and is saved on the line. Issuing takes stock (checked under the row lock). Sample
-  returns (`SMR-…`) are partial, valued at the original sample price, never more than is still out (sample row
-  locked, `SampleConcurrencyIT`), and put stock back, even for inactive books/representatives. Outstanding =
-  issued − returned (quantity and amount) is tracked and reported only; nothing is paid. Status is derived:
-  ISSUED → PARTIALLY_RETURNED → RETURNED; cancel (reason required, all stock back) only while nothing is
-  returned. Counter Sales cannot receive samples. Permissions: `SAMPLE_VIEW` (ADMIN, NORMAL_USER) for lists,
-  invoices, representative sample history and the Sample report; `SAMPLE_MANAGE` (ADMIN) to issue, return and
-  cancel. The Sample report shows issued/returned/outstanding per representative or per issued book
-  (filters: representative, book, issue date range, status); cancelled samples are listed but not counted.
-- **Customer on samples & invoice printing (client change, V12):** a sample may name one of its
-  representative's active customers (optional, like sales). Sales and samples save the customer's name,
-  phone (the "school number") and address when saved, so printed invoices never change later. Sales and
-  sample invoices print two copies on one A4 page (office copy / representative copy, dashed cut line);
-  the copies are measured off-screen first and fall back to one copy per page when they do not fit half a page.
-- **Returns:** separate numbered documents (`SRT-…` sales returns, `PRT-…` purchase returns), each line
-  linked to the original invoice/purchase line. The original document row is locked while a return is
-  recorded, so concurrent returns can never exceed the quantity on it (`ReturnConcurrencyIT`). Amount per
-  line = share of the original line total (after line discount/tax); the last units get the exact
-  remainder so refunds never exceed what was charged; the invoice-level discount is not apportioned.
-  Returns are immutable. Cancelled documents cannot be returned, and a document with returns can no
-  longer be cancelled (return the rest instead). Purchase returns are refused if the stock is gone.
-- **Dashboard & reports:** computed live with plain SQL (`ReportRepository`, bound parameters only,
-  ORDER BY from whitelists). Sales/purchase figures count COMPLETED documents by document date in the
-  shop's time zone; cancelled documents are listed in reports but excluded from totals. Report totals
-  cover all matching rows, not just the page. The dashboard omits any section the viewer lacks the
-  permission for. Inventory stock value = quantity × product purchase price.
-- **Numbering:** `document_sequence` upsert inside the document transaction; the year is the year the
-  document is entered. `PurchaseConcurrencyIT` proves concurrent saves get consecutive unique numbers
-  and a failed save consumes none.
-- **Walk-in customer:** seeded customer record used as the default on new sales.
-- **Time:** stored as `timestamptz` (UTC); "today/this month" computed in `Asia/Karachi`.
-- **Audit:** `created_by/created_at/updated_by/updated_at` on master data and documents.
+- **Fabrics:** rows of `product` with `product_type = 'FABRIC'`. `title` is the fabric name,
+  `purchase_price` the cost per metre, `selling_price` the price per metre. `fabric_code` is unique
+  (case-insensitive). Creating a fabric creates its stock row at zero. Legacy `BOOK` rows are not mapped
+  and never shown.
+- **Customers:** people who order garments. Walk-in rows (legacy) are excluded from search, pickers and
+  orders. Two active customers may not share name and phone. Delete only when nothing references them.
+- **Garment types and measurement points:** a garment type has a silhouette (`TOP`, `BOTTOM`, `FULL`) and
+  ordered points, measured in inches. Removing a point deletes it if unused, otherwise deactivates it so old
+  records keep their labels and new forms hide it.
+- **Measurement records:** taken per customer, per garment type, per day. Never edited or deleted; a
+  changed measurement is a new record. Values carry snapshots of the point label and order.
+- **Orders:** numbered `ORD-2026-000001` (`document_sequence`, gap-free). Table `orders`.
+  - Line prices are copied from the fabric when the order is saved; later price changes never alter it.
+  - Totals are computed on the server: fabric amount = metres × price (rounded to 2 decimals), line total =
+    fabric amount + stitching charge, order total = sum of line totals.
+  - Customer-supplied cloth ("CUSTOMER" lines) carries no fabric, no metres and no stock movement.
+  - Measurements are copied from the chosen record onto the line when the order is saved (and again on edit).
+  - Status: `RECEIVED → CUTTING → STITCHING → TRIAL → READY → DELIVERED`, one step at a time in either
+    direction; `CANCELLED` only through cancel. Every change writes `order_status_history`.
+  - Edits are allowed only in `RECEIVED`, `CUTTING` and `STITCHING`.
+  - Cancel returns all stock-line fabric and is refused once delivered, or when any payment exists
+    (refunds are handled outside the system).
+  - Payments (`ADVANCE`, `PAYMENT`) are append-only; the amount may not exceed the balance due. Payment status
+    is derived: `UNPAID`, `PARTIAL`, `PAID`.
+- **Calendar:** orders with a due, trial or delivery date in a range of at most 93 days, cancelled excluded.
+- **Money:** `NUMERIC(14,2)`, PKR. Metres `NUMERIC(12,3)`. Dates are shop-local (`Asia/Karachi`); timestamps
+  are `timestamptz` (UTC).
+- **Roles & permissions:** `app_user`, `role`, `user_role`, `permission` and `role_permission`. Code checks
+  permissions, not role names. Seeded roles: `ADMIN` (all permissions), `NORMAL_USER` (day-to-day set).
+- **Master data lifecycle:** records are deactivated rather than deleted once used. Updates carry `version`;
+  a stale version returns 409 so one user's edit never silently overwrites another's.
+- **Reports & dashboard:** computed live with JPA queries. Report totals cover all matching rows, not just
+  the page. Cancelled orders are listed but excluded from totals. The dashboard returns only the sections the
+  viewer may see (order figures need `ORDER_VIEW`, low-stock count needs `INVENTORY_VIEW`); other sections are null.
+- **Audit:** `created_by/created_at/updated_by/updated_at` on master data and orders.
+
+## Tailoring shop (current scope)
+
+Main menu: **Dashboard, Orders, Calendar**. Master data: **Customers, Fabrics, Garment types, Measurements**.
+Inventory: **fabric stock, stock movements, stock-in and adjustments**. Reports: **Orders** and fabric stock.
+Administration (users, roles, permissions, settings) is unchanged.
+
+Permissions: `DASHBOARD_VIEW`, `ORDER_VIEW`, `ORDER_MANAGE`, `MASTER_DATA_VIEW`, `MASTER_DATA_MANAGE`,
+`INVENTORY_VIEW`, `STOCK_ADJUST`, `REPORT_VIEW`, plus the administration codes.
+
+Book-shop features (sales, purchases, returns, samples, representatives, publishers, categories, suppliers
+and the book catalogue) were removed from the code. Their tables and data are kept by migration `V13`; the
+application no longer maps them.
 
 ## Frontend (`frontend/`, Next.js App Router, TypeScript, Tailwind)
 
@@ -155,7 +125,7 @@ one company-wide inventory, one stock location.
 |---|---|
 | `app/` | Routes and layouts only |
 | `components/` | Reusable UI (tables, dialogs, forms, toasts, pagination) |
-| `features/` | Feature screens composed from components (sales, purchases, …) |
+| `features/` | Feature screens composed from components (orders, fabrics, customers, …) |
 | `services/` | Backend calls (`apiClient` handles cookies, CSRF, errors, 401) |
 | `hooks/` | Data-fetching and UI state hooks |
 | `types/` | DTO type definitions |
@@ -163,20 +133,3 @@ one company-wide inventory, one stock location.
 
 Business rules are never implemented in React components; the UI only reflects backend results.
 
-## Phases
-
-| # | Phase | Deliverables | Verified by |
-|---|---|---|---|
-| 1 | Project setup | Spring Boot + Next.js skeletons, Flyway, security foundation, error format, DB scripts | Backend compiles + tests, frontend builds, app boots against Postgres |
-| 2 | Authentication | Users/roles/permissions migrations, login/logout/me, session timeout, last-login, inactive-user block, user & role admin screens, login page + route guard | Login, expiry, role authorization tests |
-| 3 | Master data | Products, publishers, categories, suppliers, customers: CRUD, search, paging, soft-deactivate, duplicate checks | Duplicate ISBN/category tests |
-| 4 | Inventory | Inventory + stock transactions, `InventoryService`, adjustments, history, low-stock | Consistency + concurrency tests |
-| 5 | Purchases | Purchase entry, numbering, history, details, printable invoice, cancel | Purchase → stock tests |
-| 6 | Sales | Sale entry with stock lookup, numbering, invoice, history, cancel | Sale reduces stock, insufficient stock tests |
-| 7 | Returns | Sales & purchase returns against original lines | Return quantity limits, stock tests |
-| 8 | Dashboard & reports | Dashboard KPIs, 5 reports with filters + paging | Report query tests |
-| 9 | Testing & security review | End-to-end workflow checks, authz sweep of every endpoint | Full test suite |
-| 10 | Local deployment | Production builds, Windows service scripts, backup script, LAN instructions | Clean-machine run-through |
-
-Each phase ends with: backend compile + tests, frontend build, workflow check, security review,
-and a logical git commit.

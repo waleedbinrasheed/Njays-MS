@@ -23,15 +23,15 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Map;
 
-/** Current stock per product. Stock itself changes only through purchases, sales, returns and adjustments. */
+/** Current fabric stock. Stock changes only through order movements and stock adjustments (including stock-in). */
 @RestController
 @RequestMapping("/api/inventory")
 public class InventoryController {
 
     private static final SortWhitelist SORTABLE = SortWhitelist.aliased(Map.of(
-            "title", "product.title",
-            "isbn", "product.isbn",
-            "author", "product.author",
+            "code", "product.fabricCode",
+            "name", "product.title",
+            "colour", "product.colour",
             "quantity", "quantity",
             "reorderLevel", "reorderLevel",
             "updatedAt", "updatedAt"));
@@ -47,13 +47,10 @@ public class InventoryController {
     @GetMapping
     @PreAuthorize("hasAuthority('INVENTORY_VIEW')")
     public PageResponse<InventoryItem> list(@RequestParam(required = false) String search,
-                                            @RequestParam(required = false) Long categoryId,
-                                            @RequestParam(required = false) Long publisherId,
                                             @RequestParam(required = false) StockStatus status,
                                             @RequestParam(required = false) Boolean active,
-                                            @PageableDefault(sort = "title") Pageable pageable) {
-        return queries.inventory(new InventoryFilter(search, null, categoryId, publisherId, status, active),
-                SORTABLE.check(pageable));
+                                            @PageableDefault(sort = "name") Pageable pageable) {
+        return queries.inventory(new InventoryFilter(search, null, status, active), SORTABLE.check(pageable));
     }
 
     @GetMapping("/summary")

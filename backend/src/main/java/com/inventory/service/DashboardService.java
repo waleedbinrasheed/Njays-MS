@@ -1,42 +1,48 @@
 package com.inventory.service;
 
-import com.inventory.dto.inventory.InventoryDtos.InventorySummary;
 import com.inventory.dto.report.ReportDtos.Dashboard;
-import com.inventory.dto.report.ReportDtos.Figure;
-import com.inventory.dto.report.ReportDtos.LowStockRow;
-import com.inventory.dto.report.ReportDtos.RecentDocument;
-import com.inventory.dto.report.ReportDtos.RecentMovement;
-import com.inventory.repository.ReportRepository;
-import com.inventory.repository.ReportRepository.DocumentKind;
+import com.inventory.dto.report.ReportDtos.RecentOrder;
+import com.inventory.entity.CustomerOrder;
+import com.inventory.entity.Inventory;
+import com.inventory.entity.OrderStatus;
+import com.inventory.repository.CustomerOrderRepository;
+import com.inventory.repository.InventoryRepository;
+import com.inventory.repository.OrderPaymentRepository;
 import com.inventory.security.AppUserPrincipal;
 import com.inventory.security.CurrentUser;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.util.EnumMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
- * Figures calculated live from the database. Each section is included only if the viewer holds the
- * matching permission, so the dashboard never leaks data their role cannot otherwise see.
+ * Figures calculated live. Order figures are returned only to users with ORDER_VIEW and the low-stock
+ * count only to users with INVENTORY_VIEW; other sections are null.
  */
 @Service
 public class DashboardService {
 
-    private static final int RECENT = 5;
-    private static final int MOVEMENTS = 8;
+    private static final List<OrderStatus> CLOSED = List.of(OrderStatus.DELIVERED, OrderStatus.CANCELLED);
+    private static final int RECENT = 8;
 
-    private final ReportRepository reports;
-    private final StockQueryService stock;
+    private final CustomerOrderRepository orders;
+    private final OrderPaymentRepository payments;
+    private final InventoryRepository inventories;
     private final Clock clock;
     private final ZoneId zone;
 
-    public DashboardService(ReportRepository reports, StockQueryService stock, Clock clock, ZoneId businessZone) {
-        this.reports = reports;
-        this.stock = stock;
+    public DashboardService(CustomerOrderRepository orders, OrderPaymentRepository payments,
+                            InventoryRepository inventories, Clock clock, ZoneId businessZone) {
+        this.orders = orders;
+        this.payments = payments;
+        this.inventories = inventories;
         this.clock = clock;
         this.zone = businessZone;
     }
@@ -45,28 +51,43 @@ public class DashboardService {
     public Dashboard load() {
         Set<String> can = CurrentUser.principal().map(AppUserPrincipal::getPermissions).orElse(Set.of());
         LocalDate today = LocalDate.now(clock.withZone(zone));
-        LocalDate monthStart = today.withDayOfMonth(1);
+        boolean ordersVisible = can.contains("ORDER_VIEW");
+        boolean stockVisible = can.contains("INVENTORY_VIEW");
 
-        boolean inventory = can.contains("INVENTORY_VIEW");
-        boolean sales = can.contains("SALE_VIEW");
-        boolean purchases = can.contains("PURCHASE_VIEW");
+        Long dueToday = null;
+        Long overdue = null;
+        Long readyForDelivery = null;
+        Map<OrderStatus, Long> inProgress = null;
+        BigDecimal outstanding = null;
+        Long ordersToday = null;
+        List<RecentOrder> recent = null;
+        if (ordersVisible) {
+            dueToday = orders.countDueOn(today, CLOSED);
+            overdue = orders.countOverdue(today, CLOSED);
+            readyForDelivery = orders.countByStatus(OrderStatus.READY);
+            inProgress = new EnumMap<>(OrderStatus.class);
+            for (OrderStatus status : OrderStatus.PIPELINE) {
+                inProgress.put(status, orders.countByStatus(status));
+            }
+            outstanding = orders.sumTotalsExcluding(OrderStatus.CANCELLED)
+                    .subtract(payments.sumPaidOnLiveOrders());
+            ordersToday = orders.countByOrderDate(today);
+            recent = orders.findTop8ByOrderByIdDesc().stream().map(DashboardService::recentOrder).toList();
+        }
+        Long lowStock = stockVisible ? lowStockFabrics() : null;
 
-        InventorySummary inv = inventory ? stock.summary() : null;
-        Figure todaySales = sales ? reports.documentFigure(DocumentKind.SALE, today, today) : null;
-        Figure monthSales = sales ? reports.documentFigure(DocumentKind.SALE, monthStart, today) : null;
-        Figure todayPurchases = purchases ? reports.documentFigure(DocumentKind.PURCHASE, today, today) : null;
-        Figure monthPurchases = purchases ? reports.documentFigure(DocumentKind.PURCHASE, monthStart, today) : null;
-        List<LowStockRow> lowStock = inventory ? reports.topLowStock(RECENT + 3) : null;
-        List<RecentDocument> recentSales = sales ? reports.recentDocuments(DocumentKind.SALE, RECENT) : null;
-        List<RecentDocument> recentPurchases = purchases ? reports.recentDocuments(DocumentKind.PURCHASE, RECENT) : null;
-        List<RecentMovement> movements = inventory ? reports.recentMovements(MOVEMENTS) : null;
+        return new Dashboard(today, dueToday, overdue, readyForDelivery, inProgress, outstanding, ordersToday,
+                recent, lowStock);
+    }
 
-        return new Dashboard(today,
-                inv == null ? null : inv.totalProducts(),
-                inv == null ? null : inv.totalQuantity(),
-                inv == null ? null : inv.lowStockProducts(),
-                inv == null ? null : inv.outOfStockProducts(),
-                todaySales, monthSales, todayPurchases, monthPurchases,
-                lowStock, recentSales, recentPurchases, movements);
+    private long lowStockFabrics() {
+        return inventories.findAllFabricStock().stream()
+                .filter(i -> i.getProduct().isActive())
+                .filter(Inventory::isLowStock)
+                .count();
+    }
+
+    private static RecentOrder recentOrder(CustomerOrder o) {
+        return new RecentOrder(o.getId(), o.getOrderNumber(), o.getCustomer().getName(), o.getStatus(), o.getDueDate());
     }
 }

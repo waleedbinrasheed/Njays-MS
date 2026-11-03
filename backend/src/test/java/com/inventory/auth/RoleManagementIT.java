@@ -42,14 +42,14 @@ class RoleManagementIT extends ApiTestBase {
 
         mvc.perform(get("/api/permissions").session(session))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(18)))
-                .andExpect(jsonPath("$[*].code", hasItem("SALE_CREATE")));
+                .andExpect(jsonPath("$", hasSize(11)))
+                .andExpect(jsonPath("$[*].code", hasItem("ORDER_MANAGE")));
     }
 
     @Test
     void createRoleNormalizesNameAndRejectsDuplicates() throws Exception {
         mvc.perform(withJson(post("/api/roles"), Map.of("name", "store  manager", "description", "Runs the shop",
-                        "permissions", List.of("SALE_CREATE", "SALE_VIEW"))).session(session))
+                        "permissions", List.of("ORDER_MANAGE", "ORDER_VIEW"))).session(session))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.name").value("STORE_MANAGER"))
                 .andExpect(jsonPath("$.systemRole").value(false))
@@ -87,7 +87,7 @@ class RoleManagementIT extends ApiTestBase {
                         "permissions", List.of())).session(session))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.description").value("Owners"))
-                .andExpect(jsonPath("$.permissions", hasSize(18)));
+                .andExpect(jsonPath("$.permissions", hasSize(11)));
     }
 
     @Test
@@ -95,7 +95,7 @@ class RoleManagementIT extends ApiTestBase {
         Role normal = roles.findByName(Role.NORMAL_USER).orElseThrow();
 
         mvc.perform(withJson(put("/api/roles/" + normal.getId()), Map.of("name", "NORMAL_USER",
-                        "permissions", List.of("SALE_VIEW", "SALE_CREATE", "STOCK_ADJUST"))).session(session))
+                        "permissions", List.of("ORDER_VIEW", "ORDER_MANAGE", "STOCK_ADJUST"))).session(session))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.permissions", hasItem("STOCK_ADJUST")))
                 .andExpect(jsonPath("$.permissions", hasSize(3)));
@@ -130,7 +130,7 @@ class RoleManagementIT extends ApiTestBase {
         mvc.perform(delete("/api/roles/" + tempId).with(csrf()).session(session))
                 .andExpect(status().isConflict());
 
-        mvc.perform(withJson(post("/api/roles"), Map.of("name", "UNUSED_ROLE", "permissions", List.of("SALE_VIEW")))
+        mvc.perform(withJson(post("/api/roles"), Map.of("name", "UNUSED_ROLE", "permissions", List.of("ORDER_VIEW")))
                         .session(session))
                 .andExpect(status().isCreated());
         Long unusedId = roles.findByName("UNUSED_ROLE").orElseThrow().getId();

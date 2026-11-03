@@ -3,6 +3,7 @@ package com.inventory.service;
 import com.inventory.entity.AppUser;
 import com.inventory.entity.Inventory;
 import com.inventory.entity.Product;
+import com.inventory.entity.ProductType;
 import com.inventory.entity.ReferenceType;
 import com.inventory.entity.StockTransaction;
 import com.inventory.entity.TransactionType;
@@ -17,33 +18,31 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.EnumSet;
 import java.util.List;
-import java.util.Set;
+
+import static com.inventory.service.MasterDataSupport.plain;
 
 /**
- * The ONLY component allowed to change stock quantities.
+ * The ONLY component allowed to change stock quantities. Quantities are decimal metres for fabrics.
  *
  * <p>Every movement, in one database transaction owned by the calling business operation:
  * <ol>
  *   <li>locks the product's inventory row (SELECT ... FOR UPDATE);</li>
- *   <li>validates it (non-zero change, active product where required, stock never below zero);</li>
+ *   <li>validates it (non-zero change, fabric product, active product where new stock is cut,
+ *       stock never below zero);</li>
  *   <li>updates the quantity;</li>
  *   <li>writes an immutable {@link StockTransaction} with previous and resulting quantities.</li>
  * </ol>
  * Methods use {@link Propagation#MANDATORY} so they cannot run outside the caller's transaction:
- * if the sale/purchase/adjustment fails later, the stock change rolls back with it.
+ * if the order or adjustment fails later, the stock change rolls back with it.
  */
 @Service
 public class InventoryService {
-
-    /** New stock cannot be bought or sold for inactive products; reversals and corrections are still allowed. */
-    private static final Set<TransactionType> REQUIRES_ACTIVE_PRODUCT = EnumSet.of(TransactionType.PURCHASE, TransactionType.SALE,
-            TransactionType.SAMPLE_ISSUE);
 
     private final InventoryRepository inventories;
     private final StockTransactionRepository transactions;
@@ -58,15 +57,18 @@ public class InventoryService {
         this.clock = clock;
     }
 
-    /** One requested stock change. {@code quantityChange} is signed: +in, −out. */
-    public record Movement(Long productId, TransactionType type, int quantityChange,
+    /** One requested stock change. {@code quantityChange} is signed: +in, -out, in metres. */
+    public record Movement(Long productId, TransactionType type, BigDecimal quantityChange,
                            ReferenceType referenceType, Long referenceId, String notes) {
     }
 
-    /** Creates the zero-stock row for a new product. */
+    /** Creates the stock row for a new fabric, with its reorder level and zero quantity. */
     @Transactional(propagation = Propagation.MANDATORY)
-    public Inventory initialize(Product product) {
-        return inventories.save(new Inventory(product, Instant.now(clock)));
+    public Inventory initialize(Product product, BigDecimal reorderLevel) {
+        Instant now = Instant.now(clock);
+        Inventory stock = inventories.save(new Inventory(product, now));
+        stock.changeReorderLevel(reorderLevel, now);
+        return stock;
     }
 
     @Transactional(propagation = Propagation.MANDATORY)
@@ -75,7 +77,7 @@ public class InventoryService {
     }
 
     /**
-     * Applies several movements atomically (e.g. all lines of one invoice). Rows are locked in
+     * Applies several movements atomically (e.g. all lines of one order). Rows are locked in
      * product-id order so two documents touching the same products cannot deadlock.
      * If any line is invalid, an exception is thrown and the whole transaction rolls back.
      * The returned ledger rows are in product-id order.
@@ -99,31 +101,39 @@ public class InventoryService {
     }
 
     /** Throws if applying {@code change} would take the (locked) stock below zero. */
-    public void requireAvailable(Inventory stock, int change) {
-        if (stock.getQuantity() + change < 0) {
+    public void requireAvailable(Inventory stock, BigDecimal change) {
+        if (stock.getQuantity().add(change).signum() < 0) {
             throw new BusinessException(HttpStatus.CONFLICT,
-                    "Insufficient stock for '" + stock.getProduct().getTitle() + "': available " + stock.getQuantity()
-                            + ", requested " + (-change));
+                    "Insufficient stock for '" + stock.getProduct().getTitle() + "': available "
+                            + plain(stock.getQuantity()) + " m, requested " + plain(change.negate()) + " m");
         }
     }
 
     private StockTransaction applyOne(Movement m, AppUser actor, Instant now) {
-        if (m.quantityChange() == 0) {
+        BigDecimal change = m.quantityChange();
+        if (change == null || change.signum() == 0) {
             throw new BusinessException("Quantity must not be zero");
         }
+        if (m.type() == TransactionType.ORDER_ISSUE && change.signum() > 0
+                || m.type() == TransactionType.ORDER_CANCEL && change.signum() < 0) {
+            throw new IllegalArgumentException("Sign of " + m.type() + " movement is wrong: " + change);
+        }
         Inventory stock = inventories.lockByProductId(m.productId())
-                .orElseThrow(() -> new ResourceNotFoundException("Product", m.productId()));
+                .orElseThrow(() -> new ResourceNotFoundException("Fabric", m.productId()));
         Product product = stock.getProduct();
 
-        if (REQUIRES_ACTIVE_PRODUCT.contains(m.type()) && !product.isActive()) {
-            throw new BusinessException("Product '" + product.getTitle() + "' is inactive");
+        if (product.getProductType() != ProductType.FABRIC) {
+            throw new BusinessException("'" + product.getTitle() + "' is not a fabric");
+        }
+        if (m.type() == TransactionType.ORDER_ISSUE && !product.isActive()) {
+            throw new BusinessException("Fabric '" + product.getTitle() + "' is inactive");
         }
 
-        int previous = stock.getQuantity();
-        requireAvailable(stock, m.quantityChange());
+        BigDecimal previous = stock.getQuantity();
+        requireAvailable(stock, change);
 
-        stock.applyQuantityChange(m.quantityChange(), now);
-        return transactions.save(new StockTransaction(product, m.type(), m.quantityChange(), previous,
+        stock.applyQuantityChange(change, now);
+        return transactions.save(new StockTransaction(product, m.type(), change, previous,
                 m.referenceType(), m.referenceId(), actor, now, m.notes()));
     }
 }

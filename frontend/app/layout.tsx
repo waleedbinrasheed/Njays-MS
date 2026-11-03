@@ -4,7 +4,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Leading Publishers · Inventory",
-  description: "Leading Publishers inventory, purchases, sales and samples",
+  description: "Tailoring shop orders, customers, measurements and fabric stock",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

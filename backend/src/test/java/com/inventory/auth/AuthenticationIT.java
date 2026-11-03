@@ -36,7 +36,7 @@ class AuthenticationIT extends ApiTestBase {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.username").value(user.getUsername()))
                 .andExpect(jsonPath("$.roles[0]").value("NORMAL_USER"))
-                .andExpect(jsonPath("$.permissions", hasItem("SALE_CREATE")))
+                .andExpect(jsonPath("$.permissions", hasItem("ORDER_MANAGE")))
                 .andExpect(jsonPath("$.permissions", not(hasItem("USER_MANAGE"))))
                 .andExpect(jsonPath("$.mustChangePassword").value(false))
                 .andExpect(jsonPath("$.sessionTimeoutSeconds").value(1800))

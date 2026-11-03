@@ -2,134 +2,87 @@
 
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { Badge, EmptyState, ErrorBanner, PageHeader } from "@/components/ui/Feedback";
+import { EmptyState, ErrorBanner, PageHeader } from "@/components/ui/Feedback";
 import { PageSpinner } from "@/components/ui/Spinner";
 import { StatTile, compactNumber } from "@/components/ui/StatTile";
 import { useAuth } from "@/features/auth/AuthProvider";
+import { OrderStatusBadge } from "@/features/orders/OrderBadges";
 import { useApiQuery } from "@/hooks/useApiQuery";
 import { reportService } from "@/services/reportService";
-import type { Figure, RecentDocument } from "@/types/report";
-import { formatCurrency, formatDate, formatDateTime } from "@/utils/format";
-import { TRANSACTION_TYPE_LABELS, formatSignedQuantity } from "@/utils/labels";
+import { formatCurrency, formatDate } from "@/utils/format";
+import { ORDER_STATUS_LABELS } from "@/utils/labels";
 
-function plural(n: number, word: string) {
-  return `${n.toLocaleString("en-PK")} ${word}${n === 1 ? "" : "s"}`;
-}
+const IN_PROGRESS = ["RECEIVED", "CUTTING", "STITCHING", "TRIAL"] as const;
 
-function money(f: Figure) {
-  return formatCurrency(f.total);
-}
-
+/** Tiles whose figure the backend withheld (null) are left out entirely. */
 export function DashboardPage() {
   const { user, hasPermission } = useAuth();
-  const query = useApiQuery((signal) => reportService.dashboard(signal), []);
+  const query = useApiQuery(() => reportService.dashboard(), []);
   const d = query.data;
 
   if (query.error && !d) return <ErrorBanner message={query.error} onRetry={query.reload} />;
   if (!d) return <PageSpinner />;
 
-  const reports = hasPermission("REPORT_VIEW");
+  const canOrder = hasPermission("ORDER_MANAGE");
+  const canOrders = hasPermission("ORDER_VIEW");
 
   return (
     <>
       <PageHeader
         title="Dashboard"
-        description={`Welcome, ${user?.fullName ?? ""}. Figures for ${formatDate(d.today)}; sales and purchases count completed documents.`}
+        description={`Welcome, ${user?.fullName ?? ""}. Figures for ${formatDate(d.today)}.`}
+        actions={
+          canOrder ? (
+            <Link href="/orders/new" className="inline-flex h-9 items-center rounded-md bg-blue-600 px-4 text-sm font-medium text-white hover:bg-blue-700">
+              New Order
+            </Link>
+          ) : undefined
+        }
       />
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        {d.todaySales && (
-          <StatTile label="Today's sales" value={money(d.todaySales)} detail={plural(d.todaySales.count, "invoice")} href="/sales" />
+        {d.dueToday !== null && (
+          <StatTile label="Due today" value={compactNumber(d.dueToday)} href={canOrders ? "/orders" : undefined} />
         )}
-        {d.monthSales && (
-          <StatTile label="Sales this month" value={money(d.monthSales)} detail={plural(d.monthSales.count, "invoice")} href="/sales" />
-        )}
-        {d.todayPurchases && (
+        {d.overdue !== null && (
           <StatTile
-            label="Today's purchases"
-            value={money(d.todayPurchases)}
-            detail={plural(d.todayPurchases.count, "purchase")}
-            href="/purchases"
+            label="Overdue"
+            value={compactNumber(d.overdue)}
+            status={d.overdue > 0 ? { tone: "critical", text: "Past due date" } : undefined}
+            href={canOrders ? "/orders" : undefined}
           />
         )}
-        {d.monthPurchases && (
-          <StatTile
-            label="Purchases this month"
-            value={money(d.monthPurchases)}
-            detail={plural(d.monthPurchases.count, "purchase")}
-            href="/purchases"
-          />
+        {d.readyForDelivery !== null && (
+          <StatTile label="Ready for delivery" value={compactNumber(d.readyForDelivery)} href={canOrders ? "/orders" : undefined} />
         )}
-        {d.totalProducts !== null && (
-          <StatTile label="Products" value={compactNumber(d.totalProducts)} detail="active" href="/inventory" />
+        {d.ordersToday !== null && <StatTile label="Orders today" value={compactNumber(d.ordersToday)} href={canOrders ? "/orders" : undefined} />}
+        {d.outstandingBalance !== null && (
+          <StatTile label="Outstanding balance" value={formatCurrency(d.outstandingBalance)} href={canOrders ? "/reports/orders" : undefined} />
         )}
-        {d.totalQuantity !== null && <StatTile label="Units in stock" value={compactNumber(d.totalQuantity)} href="/inventory" />}
-        {d.lowStockProducts !== null && (
-          <StatTile
-            label="Low stock"
-            value={compactNumber(d.lowStockProducts)}
-            status={d.lowStockProducts > 0 ? { tone: "warning", text: "Needs reorder" } : undefined}
-            detail="at or below reorder level"
-            href={reports ? "/reports/low-stock" : "/inventory"}
-          />
-        )}
-        {d.outOfStockProducts !== null && (
-          <StatTile
-            label="Out of stock"
-            value={compactNumber(d.outOfStockProducts)}
-            status={d.outOfStockProducts > 0 ? { tone: "critical", text: "Cannot be sold" } : undefined}
-            href="/inventory"
-          />
-        )}
+        {d.inProgress &&
+          IN_PROGRESS.map((s) => (
+            <StatTile key={s} label={ORDER_STATUS_LABELS[s]} value={compactNumber(d.inProgress?.[s] ?? 0)} detail="orders" href={canOrders ? "/orders" : undefined} />
+          ))}
       </div>
 
       <div className="mt-6 grid gap-5 xl:grid-cols-2">
-        {d.lowStock && (
-          <Panel title="Low-stock products" action={reports ? <Link href="/reports/low-stock">Low stock report</Link> : null}>
-            {d.lowStock.length === 0 ? (
-              <EmptyState title="Nothing is below its reorder level" />
+        {d.recentOrders && (
+          <Panel title="Recent orders" action={canOrders ? <Link href="/orders">All orders</Link> : null}>
+            {d.recentOrders.length === 0 ? (
+              <EmptyState title="No orders yet" action={canOrder ? <Link href="/orders/new" className="text-sm font-medium text-blue-700 hover:underline">Create the first order</Link> : undefined} />
             ) : (
-              <table className="min-w-full text-sm">
-                <thead className="text-left text-xs uppercase tracking-wide text-slate-500">
-                  <tr>
-                    <th className="py-2 pr-2 font-medium">Product</th>
-                    <th className="py-2 pr-2 text-right font-medium">Stock</th>
-                    <th className="py-2 text-right font-medium">Reorder at</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {d.lowStock.map((r) => (
-                    <tr key={r.productId}>
-                      <td className="py-2 pr-2">{r.title}</td>
-                      <td className="py-2 pr-2 text-right tabular-nums">
-                        {r.quantity === 0 ? <Badge tone="red">Out</Badge> : <span className="font-medium text-amber-700">{r.quantity}</span>}
-                      </td>
-                      <td className="py-2 text-right tabular-nums text-slate-600">{r.reorderLevel}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </Panel>
-        )}
-
-        {d.recentMovements && (
-          <Panel title="Recent stock movements" action={<Link href="/inventory/movements">All movements</Link>}>
-            {d.recentMovements.length === 0 ? (
-              <EmptyState title="No stock movements yet" />
-            ) : (
-              <ul className="divide-y divide-slate-100 text-sm">
-                {d.recentMovements.map((m) => (
-                  <li key={m.id} className="flex items-center justify-between gap-3 py-2">
+              <ul className="divide-y divide-slate-100">
+                {d.recentOrders.map((o) => (
+                  <li key={o.id} className="flex items-center justify-between gap-3 py-2 text-sm">
                     <div className="min-w-0">
-                      <p className="truncate text-slate-900">{m.product}</p>
-                      <p className="text-xs text-slate-500">
-                        {TRANSACTION_TYPE_LABELS[m.type]} · {m.user} · {formatDateTime(m.date)}
-                      </p>
+                      <Link href={`/orders/${o.id}`} className="font-medium text-blue-700 hover:underline">
+                        {o.orderNumber}
+                      </Link>
+                      <div className="truncate text-xs text-slate-500">
+                        {o.customerName} · due {formatDate(o.dueDate)}
+                      </div>
                     </div>
-                    <span className={`shrink-0 font-semibold tabular-nums ${m.quantity > 0 ? "text-emerald-700" : "text-red-600"}`}>
-                      {formatSignedQuantity(m.quantity)}
-                    </span>
+                    <OrderStatusBadge status={o.status} />
                   </li>
                 ))}
               </ul>
@@ -137,15 +90,36 @@ export function DashboardPage() {
           </Panel>
         )}
 
-        {d.recentSales && (
-          <Panel title="Recent sales" action={<Link href="/sales">Sales history</Link>}>
-            <RecentList rows={d.recentSales} href={(id) => `/sales/${id}`} empty="No sales yet" />
-          </Panel>
-        )}
-
-        {d.recentPurchases && (
-          <Panel title="Recent purchases" action={<Link href="/purchases">Purchase history</Link>}>
-            <RecentList rows={d.recentPurchases} href={(id) => `/purchases/${id}`} empty="No purchases yet" />
+        {d.lowStockFabrics && (
+          <Panel title="Fabrics to reorder" action={hasPermission("INVENTORY_VIEW") ? <Link href="/inventory">Fabric stock</Link> : null}>
+            {d.lowStockFabrics.length === 0 ? (
+              <EmptyState title="Nothing is below its reorder level" />
+            ) : (
+              <table className="min-w-full text-sm">
+                <thead className="text-left text-xs uppercase tracking-wide text-slate-500">
+                  <tr>
+                    <th className="py-2 pr-2 font-medium">Fabric</th>
+                    <th className="py-2 pr-2 text-right font-medium">On hand (m)</th>
+                    <th className="py-2 text-right font-medium">Reorder at (m)</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {d.lowStockFabrics.map((f) => (
+                    <tr key={f.productId}>
+                      <td className="py-2 pr-2">
+                        {f.name} <span className="font-mono text-xs text-slate-500">{f.code}</span>
+                      </td>
+                      <td className="py-2 pr-2 text-right tabular-nums">
+                        <span className={f.quantityOnHand <= 0 ? "font-medium text-red-600" : "font-medium text-amber-700"}>
+                          {f.quantityOnHand.toFixed(3)}
+                        </span>
+                      </td>
+                      <td className="py-2 text-right tabular-nums text-slate-600">{f.reorderLevel.toFixed(3)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </Panel>
         )}
       </div>
@@ -153,42 +127,14 @@ export function DashboardPage() {
   );
 }
 
-function Panel({ title, action, children }: { title: string; action?: ReactNode; children: ReactNode }) {
+function Panel({ title, action, children }: { title: string; action: ReactNode; children: ReactNode }) {
   return (
     <section className="rounded-lg border border-slate-200 bg-white">
-      <header className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
+      <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
         <h2 className="text-sm font-semibold text-slate-900">{title}</h2>
-        {action && <span className="text-sm text-blue-700 hover:underline">{action}</span>}
-      </header>
+        {action && <div className="text-sm text-blue-700">{action}</div>}
+      </div>
       <div className="px-4 py-2">{children}</div>
     </section>
-  );
-}
-
-function RecentList({ rows, href, empty }: { rows: RecentDocument[]; href: (id: number) => string; empty: string }) {
-  if (rows.length === 0) return <EmptyState title={empty} />;
-  return (
-    <ul className="divide-y divide-slate-100 text-sm">
-      {rows.map((r) => (
-        <li key={r.id} className="flex items-center justify-between gap-3 py-2">
-          <div className="min-w-0">
-            <Link href={href(r.id)} className="font-mono text-xs font-medium text-blue-700 hover:underline">
-              {r.number}
-            </Link>
-            {r.status === "CANCELLED" && (
-              <span className="ml-2">
-                <Badge>Cancelled</Badge>
-              </span>
-            )}
-            <p className="truncate text-xs text-slate-500">
-              {r.party} · {formatDate(r.date)}
-            </p>
-          </div>
-          <span className={`shrink-0 tabular-nums ${r.status === "CANCELLED" ? "text-slate-400 line-through" : "text-slate-900"}`}>
-            {formatCurrency(r.total)}
-          </span>
-        </li>
-      ))}
-    </ul>
   );
 }

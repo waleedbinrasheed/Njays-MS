@@ -13,6 +13,7 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import org.hibernate.annotations.Immutable;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 
 @Entity
@@ -32,14 +33,14 @@ public class StockAdjustment {
     @Column(nullable = false, length = 30)
     private AdjustmentReason reason;
 
-    @Column(name = "previous_quantity", nullable = false)
-    private int previousQuantity;
+    @Column(name = "previous_quantity", nullable = false, precision = 12, scale = 3)
+    private BigDecimal previousQuantity;
 
-    @Column(name = "adjustment_quantity", nullable = false)
-    private int adjustmentQuantity;
+    @Column(name = "adjustment_quantity", nullable = false, precision = 12, scale = 3)
+    private BigDecimal adjustmentQuantity;
 
-    @Column(name = "resulting_quantity", nullable = false)
-    private int resultingQuantity;
+    @Column(name = "resulting_quantity", nullable = false, precision = 12, scale = 3)
+    private BigDecimal resultingQuantity;
 
     @Column(length = 500)
     private String notes;
@@ -54,13 +55,13 @@ public class StockAdjustment {
     protected StockAdjustment() {
     }
 
-    public StockAdjustment(Product product, AdjustmentReason reason, int previousQuantity, int adjustmentQuantity,
-                           String notes, AppUser createdBy, Instant createdAt) {
+    public StockAdjustment(Product product, AdjustmentReason reason, BigDecimal previousQuantity,
+                           BigDecimal adjustmentQuantity, String notes, AppUser createdBy, Instant createdAt) {
         this.product = product;
         this.reason = reason;
         this.previousQuantity = previousQuantity;
         this.adjustmentQuantity = adjustmentQuantity;
-        this.resultingQuantity = previousQuantity + adjustmentQuantity;
+        this.resultingQuantity = previousQuantity.add(adjustmentQuantity);
         this.notes = notes;
         this.createdBy = createdBy;
         this.createdAt = createdAt;
@@ -78,15 +79,15 @@ public class StockAdjustment {
         return reason;
     }
 
-    public int getPreviousQuantity() {
+    public BigDecimal getPreviousQuantity() {
         return previousQuantity;
     }
 
-    public int getAdjustmentQuantity() {
+    public BigDecimal getAdjustmentQuantity() {
         return adjustmentQuantity;
     }
 
-    public int getResultingQuantity() {
+    public BigDecimal getResultingQuantity() {
         return resultingQuantity;
     }
 

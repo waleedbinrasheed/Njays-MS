@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+/** Customers. Walk-in legacy rows are never returned. */
 @RestController
 @RequestMapping("/api/customers")
 public class CustomerController {
@@ -37,17 +38,8 @@ public class CustomerController {
     @PreAuthorize("hasAuthority('MASTER_DATA_VIEW')")
     public PageResponse<CustomerResponse> list(@RequestParam(required = false) String search,
                                                @RequestParam(required = false) Boolean active,
-                                               @RequestParam(required = false) Long representativeId,
-                                               @RequestParam(defaultValue = "false") boolean unassigned,
                                                @PageableDefault(sort = "name") Pageable pageable) {
-        return service.search(search, active, representativeId, unassigned, SORTABLE.check(pageable));
-    }
-
-    /** The pre-representative default customer (kept for old invoices). */
-    @GetMapping("/walk-in")
-    @PreAuthorize("hasAuthority('MASTER_DATA_VIEW')")
-    public CustomerResponse walkIn() {
-        return service.walkIn();
+        return service.search(search, active, SORTABLE.check(pageable));
     }
 
     @GetMapping("/{id}")

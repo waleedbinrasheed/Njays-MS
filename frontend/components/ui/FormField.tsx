@@ -82,14 +82,15 @@ export function TextAreaField({ label, error, required, id, rows = 3, ...rest }:
 interface SelectFieldProps extends SelectHTMLAttributes<HTMLSelectElement> {
   label: string;
   error?: string;
+  hint?: ReactNode;
   children: ReactNode;
 }
 
-export function SelectField({ label, error, required, id, children, ...rest }: SelectFieldProps) {
+export function SelectField({ label, error, hint, required, id, children, ...rest }: SelectFieldProps) {
   const autoId = useId();
   const fieldId = id ?? autoId;
   return (
-    <FieldShell id={fieldId} label={label} required={required} error={error}>
+    <FieldShell id={fieldId} label={label} required={required} error={error} hint={hint}>
       <select id={fieldId} required={required} className={controlClass(error)} {...rest}>
         {children}
       </select>

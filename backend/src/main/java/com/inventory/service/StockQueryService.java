@@ -19,19 +19,19 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Clock;
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.util.List;
 
-import static com.inventory.repository.InventorySpecifications.category;
+import static com.inventory.repository.InventorySpecifications.fabricsOnly;
 import static com.inventory.repository.InventorySpecifications.product;
 import static com.inventory.repository.InventorySpecifications.productActive;
-import static com.inventory.repository.InventorySpecifications.productMatches;
-import static com.inventory.repository.InventorySpecifications.publisher;
+import static com.inventory.repository.InventorySpecifications.search;
 import static com.inventory.repository.InventorySpecifications.status;
 
-/** Read-only views of stock: current inventory, summary figures and movement history. */
+/** Read-only views of fabric stock: current quantities, summary figures and the movement ledger. */
 @Service
 public class StockQueryService {
 
@@ -45,8 +45,7 @@ public class StockQueryService {
         this.zone = businessZone;
     }
 
-    public record InventoryFilter(String search, Long productId, Long categoryId, Long publisherId,
-                                  StockStatus status, Boolean active) {
+    public record InventoryFilter(String search, Long productId, StockStatus status, Boolean active) {
     }
 
     public record MovementFilter(Long productId, TransactionType type, LocalDate from, LocalDate to) {
@@ -55,24 +54,28 @@ public class StockQueryService {
     @Transactional(readOnly = true)
     public PageResponse<InventoryItem> inventory(InventoryFilter f, Pageable pageable) {
         Specification<Inventory> spec = Specification.allOf(
-                productMatches(f.search()), product(f.productId()), category(f.categoryId()),
-                publisher(f.publisherId()), status(f.status()), productActive(f.active()));
+                fabricsOnly(), search(f.search()), product(f.productId()), status(f.status()), productActive(f.active()));
         return PageResponse.of(inventories.findAll(spec, pageable), InventoryMapper::toItem);
     }
 
     @Transactional(readOnly = true)
     public InventoryItem item(Long productId) {
         return inventories.findDetailedByProductId(productId)
+                .filter(i -> i.getProduct().getProductType() == com.inventory.entity.ProductType.FABRIC)
                 .map(InventoryMapper::toItem)
-                .orElseThrow(() -> new ResourceNotFoundException("Product", productId));
+                .orElseThrow(() -> new ResourceNotFoundException("Fabric", productId));
     }
 
+    /** Figures over active fabrics. */
     @Transactional(readOnly = true)
     public InventorySummary summary() {
-        Object[] row = inventories.summaryRow();
-        // Some JPA providers wrap a single aggregate row in an outer array.
-        Object[] r = row.length == 1 && row[0] instanceof Object[] inner ? inner : row;
-        return new InventorySummary(toLong(r[0]), toLong(r[1]), toLong(r[2]), toLong(r[3]));
+        List<Inventory> rows = inventories.findAllFabricStock().stream()
+                .filter(i -> i.getProduct().isActive())
+                .toList();
+        BigDecimal metres = rows.stream().map(Inventory::getQuantity).reduce(BigDecimal.ZERO, BigDecimal::add);
+        long low = rows.stream().filter(Inventory::isLowStock).count();
+        long out = rows.stream().filter(i -> i.getQuantity().signum() == 0).count();
+        return new InventorySummary(rows.size(), metres, low, out);
     }
 
     /** Dates are business days in the shop's time zone; "to" is inclusive. */
@@ -82,21 +85,12 @@ public class StockQueryService {
             throw new BusinessException("'To' date must not be before 'from' date");
         }
         Specification<StockTransaction> spec = Specification.allOf(
-                Filters.product(f.productId()), Filters.type(f.type()),
+                Filters.fabricsOnly(), Filters.product(f.productId()), Filters.type(f.type()),
                 Filters.from(startOf(f.from())), Filters.before(startOf(f.to() == null ? null : f.to().plusDays(1))));
         return PageResponse.of(transactions.findAll(spec, pageable), InventoryMapper::toResponse);
     }
 
     private Instant startOf(LocalDate date) {
         return date == null ? null : date.atStartOfDay(zone).toInstant();
-    }
-
-    private static long toLong(Object value) {
-        return value == null ? 0 : ((Number) value).longValue();
-    }
-
-    /** Exposed for services that need "today" in business time. */
-    public static LocalDate today(Clock clock, ZoneId zone) {
-        return LocalDate.now(clock.withZone(zone));
     }
 }

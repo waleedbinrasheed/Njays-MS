@@ -7,7 +7,7 @@ import { useState, type ReactNode } from "react";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { NAV_GROUPS, type NavItem } from "@/features/navigation/navItems";
 
-/** The most specific menu entry wins, so "/sales/returns" highlights Sales Returns, not Sales History. */
+/** The most specific menu entry wins, so "/inventory/movements" highlights Stock Movement, not Fabric Stock. */
 function isActive(pathname: string, href: string) {
   if (href === "/") return pathname === "/";
   if (pathname !== href && !pathname.startsWith(`${href}/`)) return false;
@@ -18,14 +18,6 @@ function isActive(pathname: string, href: string) {
 }
 
 function NavLink({ item, pathname }: { item: NavItem; pathname: string }) {
-  if (!item.ready) {
-    return (
-      <span className="flex items-center justify-between rounded-md px-3 py-1.5 text-sm text-slate-400" aria-disabled>
-        {item.label}
-        <span className="text-[10px] uppercase tracking-wide">Soon</span>
-      </span>
-    );
-  }
   const active = isActive(pathname, item.href);
   return (
     <Link

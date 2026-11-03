@@ -14,7 +14,7 @@ interface CancelDocumentDialogProps<T> {
   onDone: (result: T) => void;
 }
 
-/** Reason-required cancel confirmation shared by purchases and sales. */
+/** Reason-required cancel confirmation (used for cancelling orders). */
 export function CancelDocumentDialog<T>({ title, submitLabel, explanation, cancel, onClose, onDone }: CancelDocumentDialogProps<T>) {
   const [reason, setReason] = useState("");
   const [error, setError] = useState<string | null>(null);

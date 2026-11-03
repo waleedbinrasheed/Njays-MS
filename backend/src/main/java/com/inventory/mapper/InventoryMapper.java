@@ -18,7 +18,7 @@ public final class InventoryMapper {
     }
 
     public static StockLevel levelOf(Inventory i) {
-        if (i.getQuantity() == 0) return StockLevel.OUT_OF_STOCK;
+        if (i.getQuantity().signum() == 0) return StockLevel.OUT_OF_STOCK;
         if (i.isLowStock()) return StockLevel.LOW;
         return StockLevel.OK;
     }
@@ -27,22 +27,19 @@ public final class InventoryMapper {
         Product p = i.getProduct();
         return new InventoryItem(
                 p.getId(),
-                p.getIsbn(),
+                p.getFabricCode(),
                 p.getTitle(),
-                p.getAuthor(),
-                p.getPublisher() == null ? null : new Ref(p.getPublisher().getId(), p.getPublisher().getName()),
-                p.getCategory() == null ? null : new Ref(p.getCategory().getId(), p.getCategory().getName()),
+                p.getColour(),
+                p.getMaterial(),
                 i.getQuantity(),
                 i.getReorderLevel(),
                 levelOf(i),
-                p.getPurchasePrice(),
-                p.getSellingPrice(),
                 p.isActive(),
                 i.getUpdatedAt());
     }
 
     public static ProductRef productRef(Product p) {
-        return new ProductRef(p.getId(), p.getTitle(), p.getIsbn());
+        return new ProductRef(p.getId(), p.getFabricCode(), p.getTitle());
     }
 
     public static Ref userRef(AppUser u) {

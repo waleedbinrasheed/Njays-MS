@@ -10,7 +10,7 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 
 /**
- * Issues PUR-2026-000001 / INV-2026-000001 / SMP-2026-000001 style numbers. The counter is incremented with an atomic
+ * Issues ORD-2026-000001 style numbers. The counter is incremented with an atomic
  * upsert inside the caller's transaction: concurrent saves wait on the row lock, and a failed save
  * rolls its number back, so numbers are unique and gap-free. The sequence restarts each year
  * (the year the document is entered, in the shop's time zone).
@@ -19,12 +19,7 @@ import java.time.ZoneId;
 public class DocumentNumberService {
 
     public enum DocumentType {
-        PURCHASE("PUR"),
-        SALE("INV"),
-        SALE_RETURN("SRT"),
-        PURCHASE_RETURN("PRT"),
-        SAMPLE("SMP"),
-        SAMPLE_RETURN("SMR");
+        ORDER("ORD");
 
         private final String prefix;
 

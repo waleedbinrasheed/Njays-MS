@@ -11,6 +11,10 @@ import org.springframework.data.repository.query.Param;
 public interface StockAdjustmentRepository extends JpaRepository<StockAdjustment, Long> {
 
     @EntityGraph(attributePaths = {"product", "createdBy"})
-    @Query("select a from StockAdjustment a where (:productId is null or a.product.id = :productId)")
+    @Query("""
+            select a from StockAdjustment a
+            where a.product.productType = com.inventory.entity.ProductType.FABRIC
+              and (:productId is null or a.product.id = :productId)
+            """)
     Page<StockAdjustment> search(@Param("productId") Long productId, Pageable pageable);
 }

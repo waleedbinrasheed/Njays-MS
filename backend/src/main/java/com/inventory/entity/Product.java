@@ -4,44 +4,39 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 
 import java.math.BigDecimal;
 
+/**
+ * A stock item. For fabrics: {@code title} is the fabric name, {@code purchasePrice} the cost per metre
+ * and {@code sellingPrice} the price per metre. Legacy book columns are not mapped.
+ */
 @Entity
 @Table(name = "product")
 public class Product extends AuditableEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "product_type", nullable = false, length = 20)
-    private ProductType productType = ProductType.BOOK;
+    private ProductType productType = ProductType.FABRIC;
 
-    /** Normalised (no hyphens/spaces); null for items without an ISBN. */
-    @Column(length = 13)
-    private String isbn;
+    @Column(name = "fabric_code", length = 40)
+    private String fabricCode;
 
     @Column(nullable = false, length = 300)
     private String title;
 
-    @Column(length = 200)
-    private String author;
+    @Column(length = 100)
+    private String material;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "publisher_id")
-    private Publisher publisher;
+    @Column(length = 60)
+    private String colour;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "category_id")
-    private Category category;
+    @Column(length = 100)
+    private String pattern;
 
-    @Column(length = 50)
-    private String edition;
-
-    @Column(name = "publication_year")
-    private Short publicationYear;
+    @Column(length = 30)
+    private String width;
 
     @Column(name = "purchase_price", nullable = false, precision = 12, scale = 2)
     private BigDecimal purchasePrice;
@@ -56,12 +51,12 @@ public class Product extends AuditableEntity {
         return productType;
     }
 
-    public String getIsbn() {
-        return isbn;
+    public String getFabricCode() {
+        return fabricCode;
     }
 
-    public void setIsbn(String isbn) {
-        this.isbn = isbn;
+    public void setFabricCode(String fabricCode) {
+        this.fabricCode = fabricCode;
     }
 
     public String getTitle() {
@@ -72,46 +67,39 @@ public class Product extends AuditableEntity {
         this.title = title;
     }
 
-    public String getAuthor() {
-        return author;
+    public String getMaterial() {
+        return material;
     }
 
-    public void setAuthor(String author) {
-        this.author = author;
+    public void setMaterial(String material) {
+        this.material = material;
     }
 
-    public Publisher getPublisher() {
-        return publisher;
+    public String getColour() {
+        return colour;
     }
 
-    public void setPublisher(Publisher publisher) {
-        this.publisher = publisher;
+    public void setColour(String colour) {
+        this.colour = colour;
     }
 
-    public Category getCategory() {
-        return category;
+    public String getPattern() {
+        return pattern;
     }
 
-    public void setCategory(Category category) {
-        this.category = category;
+    public void setPattern(String pattern) {
+        this.pattern = pattern;
     }
 
-    public String getEdition() {
-        return edition;
+    public String getWidth() {
+        return width;
     }
 
-    public void setEdition(String edition) {
-        this.edition = edition;
+    public void setWidth(String width) {
+        this.width = width;
     }
 
-    public Short getPublicationYear() {
-        return publicationYear;
-    }
-
-    public void setPublicationYear(Short publicationYear) {
-        this.publicationYear = publicationYear;
-    }
-
+    /** Cost per metre. */
     public BigDecimal getPurchasePrice() {
         return purchasePrice;
     }
@@ -120,6 +108,7 @@ public class Product extends AuditableEntity {
         this.purchasePrice = purchasePrice;
     }
 
+    /** Price per metre. */
     public BigDecimal getSellingPrice() {
         return sellingPrice;
     }

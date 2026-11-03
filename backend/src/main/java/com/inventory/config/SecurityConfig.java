@@ -39,8 +39,7 @@ import org.springframework.security.web.csrf.CsrfTokenRepository;
 public class SecurityConfig {
 
     private static final String[] MASTER_DATA = {
-            "/api/products/**", "/api/publishers/**", "/api/categories/**", "/api/suppliers/**", "/api/customers/**",
-            "/api/representatives/**"};
+            "/api/customers/**", "/api/fabrics/**", "/api/garment-types/**", "/api/measurements/**"};
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http,
@@ -71,18 +70,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/stock-adjustments").hasAuthority("STOCK_ADJUST")
                         .requestMatchers(HttpMethod.GET, "/api/inventory/**", "/api/stock-transactions/**",
                                 "/api/stock-adjustments/**").hasAuthority("INVENTORY_VIEW")
-                        .requestMatchers(HttpMethod.GET, "/api/purchases/**").hasAuthority("PURCHASE_VIEW")
-                        .requestMatchers(HttpMethod.POST, "/api/purchases/*/cancel").hasAuthority("PURCHASE_CANCEL")
-                        .requestMatchers("/api/purchases/**").hasAuthority("PURCHASE_CREATE")
-                        .requestMatchers(HttpMethod.GET, "/api/sale-returns/**").hasAuthority("SALE_VIEW")
-                        .requestMatchers(HttpMethod.GET, "/api/purchase-returns/**").hasAuthority("PURCHASE_VIEW")
-                        .requestMatchers("/api/sale-returns/**", "/api/purchase-returns/**").hasAuthority("RETURN_CREATE")
-                        .requestMatchers(HttpMethod.GET, "/api/sales/**").hasAuthority("SALE_VIEW")
-                        .requestMatchers(HttpMethod.POST, "/api/sales/*/cancel").hasAuthority("SALE_CANCEL")
-                        .requestMatchers("/api/sales/**").hasAuthority("SALE_CREATE")
-                        .requestMatchers(HttpMethod.GET, "/api/samples/**", "/api/sample-returns/**",
-                                "/api/sample-reports/**").hasAuthority("SAMPLE_VIEW")
-                        .requestMatchers("/api/samples/**", "/api/sample-returns/**").hasAuthority("SAMPLE_MANAGE")
+                        .requestMatchers(HttpMethod.GET, "/api/orders/**").hasAuthority("ORDER_VIEW")
+                        .requestMatchers("/api/orders/**").hasAuthority("ORDER_MANAGE")
                         .requestMatchers(HttpMethod.GET, "/api/reports/**").hasAuthority("REPORT_VIEW")
                         .requestMatchers(HttpMethod.GET, "/api/dashboard").hasAuthority("DASHBOARD_VIEW")
                         .requestMatchers("/api/**").authenticated()

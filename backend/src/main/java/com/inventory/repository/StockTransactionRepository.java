@@ -1,6 +1,6 @@
 package com.inventory.repository;
 
-import com.inventory.entity.ReferenceType;
+import com.inventory.entity.ProductType;
 import com.inventory.entity.StockTransaction;
 import com.inventory.entity.TransactionType;
 import org.springframework.data.domain.Page;
@@ -11,7 +11,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 
 import java.time.Instant;
-import java.util.List;
 
 public interface StockTransactionRepository extends JpaRepository<StockTransaction, Long>,
         JpaSpecificationExecutor<StockTransaction> {
@@ -20,13 +19,16 @@ public interface StockTransactionRepository extends JpaRepository<StockTransacti
     @EntityGraph(attributePaths = {"product", "createdBy"})
     Page<StockTransaction> findAll(Specification<StockTransaction> spec, Pageable pageable);
 
-    List<StockTransaction> findByReferenceTypeAndReferenceId(ReferenceType referenceType, Long referenceId);
-
     boolean existsByProductId(Long productId);
 
     final class Filters {
 
         private Filters() {
+        }
+
+        /** Fabric movements only. */
+        public static Specification<StockTransaction> fabricsOnly() {
+            return (root, q, cb) -> cb.equal(root.get("product").get("productType"), ProductType.FABRIC);
         }
 
         public static Specification<StockTransaction> product(Long productId) {
