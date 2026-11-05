@@ -4,7 +4,7 @@ import Link from "next/link";
 import { AsyncSelect, type Option } from "@/components/ui/AsyncSelect";
 import { Button } from "@/components/ui/Button";
 import { SelectField, TextField } from "@/components/ui/FormField";
-import { DressMeasurements } from "@/components/measurements/DressMeasurements";
+import { DressMeasurements, DressPicture } from "@/components/measurements/DressMeasurements";
 import { loadFabricOptions, loadGarmentTypeOptions } from "@/features/master/lookups";
 import type { Fabric, GarmentType, MeasurementRecord } from "@/types/master";
 import { lineAmounts } from "@/utils/orderTotals";
@@ -29,6 +29,8 @@ const SOURCES = ["STOCK", "CUSTOMER"] as const;
 
 export function OrderLineEditor({ index, line, records, customerChosen, customerId, errors, onChange, onRemove }: OrderLineEditorProps) {
   const dressId = line.garmentType?.id ?? null;
+  // undefined: no dress chosen. null: a dress the user added, which has no picture.
+  const dressCode = line.garmentType ? ((line.garmentType.data as { code?: string | null } | undefined)?.code ?? null) : undefined;
   const matching = (records ?? []).filter((r) => r.garmentType.id === dressId);
   const chosenRecord = matching.find((r) => r.id === line.measurementRecordId) ?? null;
   const metres = num(line.fabricMetres);
@@ -113,6 +115,13 @@ export function OrderLineEditor({ index, line, records, customerChosen, customer
             </Link>
           )}
         </p>
+      )}
+
+      {/* The reference picture shows as soon as the dress is chosen; with a measurement record it sits in the block below. */}
+      {dressCode && !chosenRecord && (
+        <div className="rounded-md bg-slate-50 p-3">
+          <DressPicture code={dressCode} dressName={line.garmentType?.label ?? ""} />
+        </div>
       )}
 
       {/* Fabric: source, then the fabric and metres on the same line. */}

@@ -4,6 +4,7 @@ import { useState, type FormEvent } from "react";
 import { AsyncSelect, type Option } from "@/components/ui/AsyncSelect";
 import { TextAreaField, TextField } from "@/components/ui/FormField";
 import { FormDialog } from "@/components/ui/FormDialog";
+import { DressPicture } from "@/components/measurements/DressMeasurements";
 import { ApiError } from "@/services/apiClient";
 import { measurementService } from "@/services/masterDataService";
 import type { GarmentType } from "@/types/master";
@@ -91,6 +92,12 @@ export function TakeMeasurementsDialog({ customerId, customerName, onClose, onSa
         error={errors.garment}
         required
       />
+
+      {type?.code && (
+        <div className="rounded-md bg-slate-50 p-3">
+          <DressPicture code={type.code} dressName={type.name} />
+        </div>
+      )}
 
       {type && points.length === 0 && (
         <p className="text-sm text-amber-700">This dress type has no active measurement points. Add them under Dress Types.</p>

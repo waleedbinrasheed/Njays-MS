@@ -15,6 +15,22 @@ export interface MeasurementLine {
   sortOrder: number;
 }
 
+/** The reference picture of a built-in dress type. Renders nothing for a dress type the user added. */
+export function DressPicture({ code, dressName, compact = false }: { code: string | null; dressName: string; compact?: boolean }) {
+  const picture = code ? PICTURES[code] : undefined;
+  if (!code || !picture) return null;
+  return (
+    <Image
+      src={`/dress-reference/${code}.jpg`}
+      alt={`Reference picture for ${dressName}`}
+      width={picture.width}
+      height={picture.height}
+      unoptimized
+      className={`${compact ? "w-28" : "w-44 sm:w-56"} h-auto shrink-0 rounded border border-slate-200 bg-white`}
+    />
+  );
+}
+
 /**
  * The reference picture of a dress type, with its measurements in inches beside it. Stacks vertically
  * on phones. Without a picture (a dress type the user added) only the measurements are shown.
@@ -32,20 +48,10 @@ export function DressMeasurements({
   compact?: boolean;
 }) {
   const ordered = [...measurements].sort((a, b) => a.sortOrder - b.sortOrder);
-  const picture = code ? PICTURES[code] : undefined;
 
   return (
     <div className={`flex flex-col items-start gap-4 sm:flex-row ${compact ? "text-[10px] leading-tight" : "text-sm"}`}>
-      {code && picture && (
-        <Image
-          src={`/dress-reference/${code}.jpg`}
-          alt={`Reference picture for ${dressName}`}
-          width={picture.width}
-          height={picture.height}
-          unoptimized
-          className={`${compact ? "w-28" : "w-44 sm:w-56"} h-auto shrink-0 rounded border border-slate-200 bg-white`}
-        />
-      )}
+      <DressPicture code={code} dressName={dressName} compact={compact} />
       <table className="w-full min-w-0 text-sm sm:max-w-sm">
         <thead className="text-left text-xs uppercase tracking-wide text-slate-500">
           <tr>

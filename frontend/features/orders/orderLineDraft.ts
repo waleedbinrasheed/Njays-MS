@@ -41,7 +41,8 @@ export function emptyLine(): LineDraft {
 export function lineFromSaved(l: OrderLine): LineDraft {
   return {
     key: nextKey++,
-    garmentType: { id: l.garmentType.id, label: l.garmentType.name },
+    // data carries the picture code, which a saved line needs to show its reference picture.
+    garmentType: { id: l.garmentType.id, label: l.garmentType.name, data: { code: l.garmentType.code } },
     fabricSource: l.fabricSource,
     fabric: l.fabric ? { id: l.fabric.id, label: `${l.fabric.code} · ${l.fabric.name}${l.fabric.colour ? ` · ${l.fabric.colour}` : ""}` } : null,
     fabricPricePerMetre: Number(l.fabricPricePerMetre ?? 0),

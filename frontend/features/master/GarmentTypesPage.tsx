@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/Button";
 import { Checkbox, TextAreaField, TextField } from "@/components/ui/FormField";
 import { FormDialog } from "@/components/ui/FormDialog";
 import { useEntityForm } from "@/hooks/useEntityForm";
+import { DressPicture } from "@/components/measurements/DressMeasurements";
 import { garmentTypeService } from "@/services/masterDataService";
 import type { GarmentType, GarmentTypeInput } from "@/types/master";
 import { formatCurrency } from "@/utils/format";
@@ -169,6 +170,11 @@ function GarmentTypeForm({ record, onClose, onSaved }: FormRenderProps<GarmentTy
         <p className="rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-800">
           This dress type is used on orders or measurement records. Removing a point deactivates it instead of deleting it.
         </p>
+      )}
+      {record?.code && (
+        <div className="flex justify-center rounded-md bg-slate-50 p-3">
+          <DressPicture code={record.code} dressName={record.name} />
+        </div>
       )}
       <div className="grid gap-4 sm:grid-cols-2">
         <TextField label="Name" value={v.name} onChange={(e) => set("name", e.target.value)} error={errors.name} required autoFocus />
